@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아진이 게임 - 시작</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap');
+
+    html, body {
+      height:100%; margin:0;
+      background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 50%, #e0f7fa 100%);
+      font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+      display:flex; justify-content:center; align-items:center;
+    }
+    #gameWrap{
+      aspect-ratio:3/4;
+      height:100vh; max-height:100vh; width:auto;
+      background: linear-gradient(180deg, #fff5f9 0%, #f0f4ff 40%, #eafaf7 100%);
+      position:relative; overflow:hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    /* 타이틀 */
+    #title {
+      position:absolute; top:5%; left:50%; transform:translateX(-50%);
+      z-index:30; text-align:center;
+    }
+    #title h1 {
+      font-size:28px; font-weight:900;
+      background: linear-gradient(135deg, #f48fb1, #ce93d8, #81d4fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin:0; letter-spacing:2px;
+      text-shadow: none;
+    }
+    #title p {
+      font-size:13px; color:#aaa; margin:6px 0 0 0; font-weight:500;
+    }
+
+    /* 성별 선택 */
+    #genderUI{
+      position:absolute; top:18%; left:50%; transform:translateX(-50%);
+      display:flex; gap:12px; z-index:30;
+    }
+    .gender-btn {
+      padding:10px 28px;
+      border-radius:24px;
+      border:2px solid transparent;
+      font-weight:700;
+      font-size:15px;
+      cursor:pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: all 0.25s ease;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .gender-btn:active { transform: scale(0.95); }
+
+    #btnGirl {
+      background: linear-gradient(135deg, #ffd6e8 0%, #ffb6c1 100%);
+      color: #c2185b;
+    }
+    #btnGirl.active {
+      border-color: #f48fb1;
+      box-shadow: 0 4px 16px rgba(244,143,177,0.4);
+    }
+
+    #btnBoy {
+      background: linear-gradient(135deg, #d6eaff 0%, #b3d4fc 100%);
+      color: #1565c0;
+    }
+    #btnBoy.active {
+      border-color: #64b5f6;
+      box-shadow: 0 4px 16px rgba(100,181,246,0.4);
+    }
+
+    /* 방송 버튼 */
+    #broadcastBtn{
+      position:absolute; right:16px; top:50%; transform:translateY(-50%);
+      z-index:30;
+      padding:10px 16px;
+      border-radius:22px;
+      border:none;
+      background: linear-gradient(135deg, #fff3b0 0%, #ffe066 100%);
+      color:#b8860b;
+      font-weight:700;
+      font-size:13px;
+      cursor:pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      box-shadow: 0 3px 12px rgba(255,224,102,0.4);
+      transition: all 0.2s ease;
+    }
+    #broadcastBtn:active { transform: translateY(-50%) scale(0.95); }
+
+    /* 시작 버튼 */
+    #startBtn{
+      position:absolute; bottom:5%; left:50%; transform:translateX(-50%);
+      z-index:30;
+      padding:16px 60px;
+      border-radius:30px;
+      border:none;
+      background: linear-gradient(135deg, #f48fb1 0%, #ce93d8 50%, #81d4fa 100%);
+      color:#fff;
+      font-size:20px;
+      font-weight:900;
+      cursor:pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      box-shadow: 0 6px 24px rgba(206,147,216,0.4);
+      letter-spacing:4px;
+      transition: all 0.25s ease;
+    }
+    #startBtn:hover {
+      box-shadow: 0 8px 32px rgba(206,147,216,0.6);
+    }
+    #startBtn:active { transform: translateX(-50%) scale(0.95); }
+
+    /* 하단 장식 */
+    .deco-dots {
+      position:absolute; bottom:2%; left:50%; transform:translateX(-50%);
+      display:flex; gap:6px; z-index:25;
+    }
+    .deco-dot {
+      width:6px; height:6px; border-radius:50%;
+      opacity:0.3;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrap">
+    <div id="title">
+      <h1>아진이 게임</h1>
+      <p>캐릭터를 선택하세요 ✨</p>
+    </div>
+
+    <div id="genderUI">
+      <button id="btnGirl" class="gender-btn active">👧 여자</button>
+      <button id="btnBoy" class="gender-btn">👦 남자</button>
+    </div>
+
+    <button id="broadcastBtn">📡 방송</button>
+    <button id="startBtn">시작</button>
+
+    <div class="deco-dots">
+      <div class="deco-dot" style="background:#f48fb1;"></div>
+      <div class="deco-dot" style="background:#ce93d8;"></div>
+      <div class="deco-dot" style="background:#81d4fa;"></div>
+      <div class="deco-dot" style="background:#a5d6a7;"></div>
+      <div class="deco-dot" style="background:#ffe082;"></div>
+    </div>
+
+    <canvas id="game"></canvas>
+  </div>
+
+  <script>
+    const ASSETS = { girl: "girl.png", boy: "boy.png" };
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    let images = {};
+    let gender = "girl";
+
+    const params = new URLSearchParams(location.search);
+    const paramGender = params.get("gender");
+    if (paramGender === "boy") gender = "boy";
+
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw();
+    }
+    window.addEventListener("resize", resize);
+
+    function loadImage(src){
+      return new Promise((res, rej)=>{
+        const img = new Image();
+        img.onload = ()=>res(img);
+        img.onerror = ()=>rej(new Error("이미지 로드 실패: " + src));
+        img.src = src;
+      });
+    }
+
+    const btnGirl = document.getElementById("btnGirl");
+    const btnBoy  = document.getElementById("btnBoy");
+
+    btnGirl.onclick = ()=>setGender("girl");
+    btnBoy.onclick  = ()=>setGender("boy");
+
+    function setGender(g){
+      gender = g;
+      btnGirl.classList.toggle("active", g==="girl");
+      btnBoy.classList.toggle("active", g==="boy");
+      draw();
+    }
+
+    function draw(){
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);
+
+      const img = images[gender];
+      if(!img) return;
+
+      const targetH = h * 0.62;
+      const scale = targetH / img.height;
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+
+      const bottomReserved = 90;
+      const x = (w - dw) / 2;
+      const y = h - dh - bottomReserved;
+
+      ctx.drawImage(img, x, y, dw, dh);
+    }
+
+    document.getElementById("broadcastBtn").onclick =
+      ()=> location.href = `broadcast.html?gender=${encodeURIComponent(gender)}`;
+
+    document.getElementById("startBtn").onclick =
+      ()=> location.href = `main.html?gender=${encodeURIComponent(gender)}`;
+
+    (async function init(){
+      images.girl = await loadImage(ASSETS.girl);
+      images.boy  = await loadImage(ASSETS.boy);
+
+      btnGirl.classList.toggle("active", gender==="girl");
+      btnBoy.classList.toggle("active", gender==="boy");
+
+      resize();
+    })().catch(err=>{
+      console.error(err);
+      alert(err.message);
+    });
+  </script>
+</body>
+</html>

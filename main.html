@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아진이 게임 - 메인</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap');
+
+    html, body {
+      height:100%; margin:0;
+      background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 50%, #e0f7fa 100%);
+      font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+      display:flex; justify-content:center; align-items:center;
+    }
+
+    #gameWrap{
+      aspect-ratio:3/4;
+      height:100vh; max-height:100vh; width:auto;
+      background: linear-gradient(180deg, #fff5f9 0%, #f0f4ff 40%, #eafaf7 100%);
+      border:none; border-radius:0;
+      position:relative; overflow:hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    /* 공통 버튼 */
+    .btn-soft {
+      padding:10px 18px;
+      border-radius:20px;
+      border:none;
+      font-weight:700;
+      cursor:pointer;
+      z-index:30;
+      position:absolute;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size:14px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .btn-soft:active { transform: scale(0.95); }
+
+    #backBtn{
+      top:16px; left:16px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(10px);
+      color:#7c7c8a;
+      border-radius:50%;
+      width:44px; height:44px;
+      padding:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px;
+    }
+    #broadcastBtn{
+      right:16px; top:50%;
+      transform:translateY(-50%);
+      background: linear-gradient(135deg, #fff3b0 0%, #ffe066 100%);
+      color:#b8860b;
+      border-radius:22px;
+      padding:10px 16px;
+      font-size:13px;
+      box-shadow: 0 3px 12px rgba(255,224,102,0.4);
+    }
+
+    /* 메인 UI */
+    #mainUI { position:absolute; inset:0; z-index:20; pointer-events:none; }
+    #mainUI .clickable { pointer-events:auto; cursor:pointer; }
+
+    /* 왼쪽 패널 */
+    #leftPanel{
+      position:absolute; left:14px; top:68px;
+      width:44%; 
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(12px);
+      border-radius:24px;
+      padding:14px; box-sizing:border-box;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+    .row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+
+    .pill {
+      flex:1; height:42px;
+      border-radius:16px;
+      display:flex; align-items:center; justify-content:center; gap:6px;
+      font-weight:700; font-size:13px;
+      border:none;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .pill:active { transform: scale(0.96); }
+
+    .pill-pink { background: linear-gradient(135deg, #ffd6e8 0%, #ffb6c1 100%); color:#c2185b; }
+    .pill-blue { background: linear-gradient(135deg, #d6eaff 0%, #b3d4fc 100%); color:#1565c0; }
+    .pill-purple { background: linear-gradient(135deg, #e8d5f5 0%, #ce93d8 100%); color:#7b1fa2; }
+    .pill-mint { background: linear-gradient(135deg, #d4f5e9 0%, #a5d6a7 100%); color:#2e7d32; }
+    .pill-peach { background: linear-gradient(135deg, #ffe0cc 0%, #ffab91 100%); color:#d84315; }
+    .pill-yellow { background: linear-gradient(135deg, #fff9c4 0%, #fff176 100%); color:#f9a825; }
+    .pill-lavender { background: linear-gradient(135deg, #e1d5f0 0%, #b39ddb 100%); color:#512da8; }
+    .pill-sky { background: linear-gradient(135deg, #d0f0fd 0%, #81d4fa 100%); color:#0277bd; }
+
+    .pill-small { width:52px; flex:none; }
+
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+    /* 오른쪽 상단 */
+    #topRight{
+      position:absolute; right:14px; top:18px;
+      width:40%;
+      display:flex; flex-direction:column; gap:10px;
+      align-items:flex-end;
+      pointer-events:auto;
+    }
+    #coins{
+      width:78%; height:42px;
+      background: linear-gradient(135deg, #fff9c4 0%, #ffe082 100%);
+      border:none; border-radius:20px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 14px; box-sizing:border-box;
+      font-weight:900; color:#e65100;
+      box-shadow: 0 3px 12px rgba(255,224,130,0.3);
+      font-size:14px;
+    }
+    #swatches{ display:flex; gap:10px; align-items:center; }
+    .swatchWrap{
+      text-align:center; font-size:11px; font-weight:700;
+      color:#888;
+      cursor:pointer;
+      transition: transform 0.2s ease;
+    }
+    .swatchWrap:active { transform: scale(0.92); }
+    .swatch{
+      width:46px; height:46px;
+      border:none; border-radius:16px;
+      margin:0 auto 4px auto;
+      box-sizing:border-box;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .swatch-event { background: linear-gradient(135deg, #fce4ec, #f8bbd0); }
+    .swatch-map { background: linear-gradient(135deg, #e0f2f1, #80cbc4); }
+    .swatch-gift { background: linear-gradient(135deg, #ede7f6, #b39ddb); }
+
+    /* 왼쪽 아이콘 */
+    #leftIcons{
+      position:absolute; left:14px; top:52%;
+      transform:translateY(-50%);
+      display:flex; flex-direction:column; gap:12px;
+      pointer-events:auto;
+    }
+    .circleIcon{
+      width:50px; height:50px;
+      border:none; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px;
+      user-select:none;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+      transition: all 0.2s ease;
+      cursor:pointer;
+    }
+    .circleIcon:active { transform: scale(0.9); }
+    .circle-home { background: linear-gradient(135deg, #e3f2fd, #90caf9); }
+    .circle-chat { background: linear-gradient(135deg, #f3e5f5, #ce93d8); }
+
+    /* 하단 네비 */
+    #bottomBar{
+      position:absolute; left:50%; bottom:20px;
+      transform:translateX(-50%);
+      width:88%; height:70px;
+      border:none; border-radius:35px;
+      display:flex; align-items:center; justify-content:space-around;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(14px);
+      box-sizing:border-box; padding:0 10px;
+      pointer-events:auto;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      border: 1px solid rgba(255,255,255,0.9);
+    }
+    .navItem{
+      width:52px; height:52px;
+      border:none; border-radius:50%;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:2px;
+      user-select:none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+      cursor:pointer;
+    }
+    .navItem:active { transform: scale(0.9); }
+    .navItem .nav-icon { font-size:18px; line-height:1; }
+    .navItem .nav-label { font-size:9px; font-weight:700; line-height:1; }
+
+    .nav-shop { background: linear-gradient(135deg, #fce4ec, #f48fb1); color:#c2185b; }
+    .nav-couple { background: linear-gradient(135deg, #fff3e0, #ffcc80); color:#e65100; }
+    .nav-green { background: linear-gradient(135deg, #e8f5e9, #a5d6a7); color:#2e7d32; }
+    .nav-search { background: linear-gradient(135deg, #e8eaf6, #9fa8da); color:#283593; }
+  </style>
+</head>
+
+<body>
+  <div id="gameWrap">
+    <button class="btn-soft" id="backBtn">←</button>
+    <button class="btn-soft" id="broadcastBtn">📡 방송</button>
+
+    <div id="mainUI">
+      <div id="leftPanel" class="clickable">
+        <div class="row">
+          <div class="pill pill-pink clickable" data-act="홈파티">🎉 홈파티</div>
+          <div class="pill pill-blue pill-small clickable" data-act="친구">👫</div>
+        </div>
+
+        <div class="pill pill-purple clickable" data-act="토끼TV" style="margin-bottom:8px;">🐰 토끼TV</div>
+        <div class="pill pill-mint clickable" data-act="전국" style="height:36px; font-size:12px; margin-bottom:8px;">🌏 전국</div>
+
+        <div class="grid2">
+          <div class="pill pill-peach clickable" data-act="이곳">📍 이곳</div>
+          <div class="pill pill-yellow clickable" data-act="게임">🎮 게임</div>
+        </div>
+      </div>
+
+      <div id="topRight">
+        <div id="coins" class="clickable" data-act="코인">
+          <span>🪙</span>
+          <span style="letter-spacing:1px;">0000</span>
+        </div>
+        <div id="swatches">
+          <div class="swatchWrap clickable" data-act="이벤트"><div class="swatch swatch-event">🎁</div>이벤트</div>
+          <div class="swatchWrap clickable" data-act="지도"><div class="swatch swatch-map">🗺️</div>지도</div>
+          <div class="swatchWrap clickable" data-act="주기"><div class="swatch swatch-gift">💝</div>주기</div>
+        </div>
+      </div>
+
+      <div id="leftIcons">
+        <div class="circleIcon circle-home clickable" data-act="홈">🏠</div>
+        <div class="circleIcon circle-chat clickable" data-act="톡">💬</div>
+      </div>
+
+      <div id="bottomBar" class="clickable">
+        <div class="navItem nav-shop clickable" data-act="쇼핑">
+          <span class="nav-icon">🛍️</span>
+          <span class="nav-label">쇼핑</span>
+        </div>
+        <div class="navItem nav-couple clickable" data-act="커플">
+          <span class="nav-icon">💑</span>
+          <span class="nav-label">커플</span>
+        </div>
+        <div class="navItem nav-green clickable" data-act="초록">
+          <span class="nav-icon">🌿</span>
+          <span class="nav-label">초록</span>
+        </div>
+        <div class="navItem nav-search clickable" data-act="탄검">
+          <span class="nav-icon">🔍</span>
+          <span class="nav-label">탄검</span>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="game"></canvas>
+  </div>
+
+  <script>
+    const ASSETS = { girl: "girl.png", boy: "boy.png" };
+
+    const params = new URLSearchParams(location.search);
+    const gender = (params.get("gender") === "boy") ? "boy" : "girl";
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    let images = {};
+
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw();
+    }
+    window.addEventListener("resize", resize);
+
+    function loadImage(src){
+      return new Promise((res, rej)=>{
+        const img = new Image();
+        img.onload = ()=>res(img);
+        img.onerror = ()=>rej(new Error("이미지 로드 실패: " + src));
+        img.src = src;
+      });
+    }
+
+    function draw(){
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);
+
+      const img = images[gender];
+      if(!img) return;
+
+      const targetH = h * 0.62;
+      const scale = targetH / img.height;
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+
+      const bottomReserved = 90;
+      const x = (w - dw) / 2;
+      const y = h - dh - bottomReserved;
+
+      ctx.drawImage(img, x, y, dw, dh);
+    }
+
+    document.getElementById("broadcastBtn").onclick = ()=> location.href = `broadcast.html?gender=${encodeURIComponent(gender)}`;
+    document.getElementById("backBtn").onclick = ()=> {
+      location.href = `index.html?gender=${encodeURIComponent(gender)}`;
+    };
+
+    document.getElementById("mainUI").addEventListener("click", (e)=>{
+      const el = e.target.closest("[data-act]");
+      if(!el) return;
+      alert("클릭: " + el.dataset.act);
+    });
+
+    (async function init(){
+      images.girl = await loadImage(ASSETS.girl);
+      images.boy  = await loadImage(ASSETS.boy);
+      resize();
+    })().catch(err=>{
+      console.error(err);
+      alert(err.message);
+    });
+  </script>
+</body>
+</html>
