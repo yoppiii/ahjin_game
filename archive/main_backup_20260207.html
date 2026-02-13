@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아진이 게임 - 메인</title>
+
+  <style>
+    html, body {
+      height:100%; margin:0; background:#f6f6f6;
+      font-family: system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+      display:flex; justify-content:center; align-items:center;
+    }
+    #gameWrap{
+      aspect-ratio:3/4;
+      height:100vh; max-height:100vh; width:auto;
+      background:#fff; border:1px solid #ddd;
+      position:relative; overflow:hidden;
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    button{
+      padding:12px 18px;
+      border-radius:12px;
+      border:1px solid #cfcfcf;
+      background:#fff;
+      font-weight:800;
+      cursor:pointer;
+      z-index:30;
+      position:absolute;
+    }
+    #backBtn{ top:16px; left:16px; }
+    #broadcastBtn{
+      right:16px; top:50%;
+      transform:translateY(-50%);
+      background:#ffe066; border-color:#f2c94c;
+    }
+
+    /* 메인 UI */
+    #mainUI { position:absolute; inset:0; z-index:20; pointer-events:none; }
+    #mainUI .clickable { pointer-events:auto; }
+
+    #leftPanel{
+      position:absolute; left:18px; top:70px;
+      width:42%; height:34%;
+      border:2px solid #111; border-radius:22px; background:#fff;
+      padding:14px; box-sizing:border-box;
+    }
+    .row{ display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+    .big{
+      flex:1; height:44px;
+      border:2px solid #111; border-radius:14px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; background:#fff;
+    }
+    .small{
+      width:56px; height:44px;
+      border:2px solid #111; border-radius:14px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; background:#fff;
+    }
+    .mid{
+      width:100%; height:44px;
+      border:2px solid #111; border-radius:14px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; background:#fff;
+      margin-bottom:10px;
+    }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+    .tile{
+      height:52px;
+      border:2px solid #111; border-radius:14px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; background:#fff;
+    }
+
+    #topRight{
+      position:absolute; right:18px; top:18px;
+      width:40%;
+      display:flex; flex-direction:column; gap:12px;
+      align-items:flex-end;
+      pointer-events:auto;
+    }
+    #coins{
+      width:72%; height:44px;
+      border:2px solid #111; border-radius:14px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 12px; box-sizing:border-box;
+      font-weight:900; background:#fff;
+    }
+    #swatches{ display:flex; gap:14px; align-items:center; }
+    .swatchWrap{ text-align:center; font-size:12px; font-weight:800; }
+    .swatch{
+      width:44px; height:44px;
+      border:2px solid #111; border-radius:14px;
+      background:#fff; margin:0 auto 6px auto;
+      box-sizing:border-box;
+    }
+
+    #leftIcons{
+      position:absolute; left:18px; top:54%;
+      transform:translateY(-50%);
+      display:flex; flex-direction:column; gap:14px;
+      pointer-events:auto;
+    }
+    .circleIcon{
+      width:54px; height:54px;
+      border:2px solid #111; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:1000; background:#fff;
+      user-select:none;
+    }
+
+    #bottomBar{
+      position:absolute; left:50%; bottom:22px;
+      transform:translateX(-50%);
+      width:86%; height:72px;
+      border:2px solid #111; border-radius:40px;
+      display:flex; align-items:center; justify-content:space-around;
+      background:#fff; box-sizing:border-box; padding:0 14px;
+      pointer-events:auto;
+    }
+    .navItem{
+      width:58px; height:58px;
+      border:2px solid #111; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:1000; background:#fff; user-select:none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="gameWrap">
+    <button id="backBtn">뒤로</button>
+    <button id="broadcastBtn">방송</button>
+
+    <div id="mainUI">
+      <div id="leftPanel" class="clickable">
+        <div class="row">
+          <div class="big clickable" data-act="홈파티">홈파티</div>
+          <div class="small clickable" data-act="친구">친구</div>
+        </div>
+
+        <div class="mid clickable" data-act="토끼TV">토끼TV</div>
+        <div class="mid clickable" data-act="전국" style="height:34px; font-size:13px;">전국</div>
+
+        <div class="grid2">
+          <div class="tile clickable" data-act="이곳">이곳</div>
+          <div class="tile clickable" data-act="게임">게임</div>
+        </div>
+        <!-- ✅ 설정/전화기/대장벌 삭제 -->
+      </div>
+
+      <div id="topRight">
+        <div id="coins" class="clickable" data-act="코인">
+          <span style="font-weight:1000;">b</span>
+          <span style="letter-spacing:2px;">0000</span>
+        </div>
+        <div id="swatches">
+          <div class="swatchWrap clickable" data-act="이벤트"><div class="swatch"></div>이벤트</div>
+          <div class="swatchWrap clickable" data-act="지도"><div class="swatch"></div>지도</div>
+          <div class="swatchWrap clickable" data-act="주기"><div class="swatch"></div>주기</div>
+        </div>
+      </div>
+
+      <div id="leftIcons">
+        <div class="circleIcon clickable" data-act="홈">⌂</div>
+        <div class="circleIcon clickable" data-act="톡">톡</div>
+      </div>
+
+      <div id="bottomBar" class="clickable">
+        <div class="navItem clickable" data-act="쇼핑">쇼핑</div>
+        <div class="navItem clickable" data-act="커플">커플</div>
+        <div class="navItem clickable" data-act="초록">초록</div>
+        <div class="navItem clickable" data-act="탄검">탄검</div>
+      </div>
+
+      <!-- ✅ 방송 큰 버튼(말풍선) 삭제 -->
+    </div>
+
+    <canvas id="game"></canvas>
+  </div>
+
+  <script>
+    const ASSETS = { girl: "girl.png", boy: "boy.png" };
+
+    const params = new URLSearchParams(location.search);
+    const gender = (params.get("gender") === "boy") ? "boy" : "girl";
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    let images = {};
+
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw();
+    }
+    window.addEventListener("resize", resize);
+
+    function loadImage(src){
+      return new Promise((res, rej)=>{
+        const img = new Image();
+        img.onload = ()=>res(img);
+        img.onerror = ()=>rej(new Error("이미지 로드 실패: " + src));
+        img.src = src;
+      });
+    }
+
+    function draw(){
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);
+
+      const img = images[gender];
+      if(!img) return;
+
+      // ✅ 캐릭터 크기/위치: 인트로와 동일하게 유지
+      const targetH = h * 0.62;
+      const scale = targetH / img.height;
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+
+      const bottomReserved = 90; // ✅ 이동 안 함(인트로와 동일)
+      const x = (w - dw) / 2;
+      const y = h - dh - bottomReserved;
+
+      ctx.drawImage(img, x, y, dw, dh);
+    }
+
+    document.getElementById("broadcastBtn").onclick = ()=> alert("📡 방송 (다음 단계에서 연결)");
+    document.getElementById("backBtn").onclick = ()=> {
+      location.href = `index.html?gender=${encodeURIComponent(gender)}`;
+    };
+
+    document.getElementById("mainUI").addEventListener("click", (e)=>{
+      const el = e.target.closest("[data-act]");
+      if(!el) return;
+      alert("클릭: " + el.dataset.act);
+    });
+
+    (async function init(){
+      images.girl = await loadImage(ASSETS.girl);
+      images.boy  = await loadImage(ASSETS.boy);
+      resize();
+    })().catch(err=>{
+      console.error(err);
+      alert(err.message);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "ahjin-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ahjin game static app with SimSimi chat proxy",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -222,7 +222,7 @@
     <div id="chatArea">
       <div id="chatMessages">
         <div class="msg msg-bot">
-          <div class="bot-name">🫥 OC</div>
+          <div class="bot-name">🤖 심심이</div>
           안녕! 방송에 온 걸 환영해~ 무슨 얘기 할까? 💬
         </div>
       </div>
@@ -293,8 +293,20 @@
     const msgInput = document.getElementById("msgInput");
     const sendBtn = document.getElementById("sendBtn");
 
-    const BOT_NAME = "토끼봇";
-    const BOT_ICON = "🐰";
+    const BOT_NAME = "심심이";
+    const BOT_ICON = "🤖";
+    const CHAT_API_URL = resolveChatApiUrl();
+    let apiNoticeShown = false;
+
+    function resolveChatApiUrl() {
+      const q = new URLSearchParams(location.search).get("api");
+      if (q && q.trim()) localStorage.setItem("AHJIN_CHAT_API_URL", q.trim());
+      const saved = localStorage.getItem("AHJIN_CHAT_API_URL");
+      const base = (q || saved || "").trim();
+      if (!base) return "/api/chat";
+      const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
+      return normalizedBase.endsWith("/api/chat") ? normalizedBase : `${normalizedBase}/api/chat`;
+    }
 
     // 패턴 매칭 응답
     const PATTERNS = [
@@ -339,7 +351,7 @@
       return FALLBACKS[Math.floor(Math.random() * FALLBACKS.length)];
     }
 
-    function sendMessage() {
+    async function sendMessage() {
       const text = msgInput.value.trim();
       if (!text) return;
 
@@ -348,14 +360,41 @@
       showTyping();
       sendBtn.disabled = true;
 
-      // 랜덤 딜레이로 자연스럽게
-      const delay = 500 + Math.random() * 1500;
-      setTimeout(() => {
+      try {
+        const reply = await requestApiReply(text);
+        removeTyping();
+        addBotMessage(reply || getBotReply(text));
+      } catch (err) {
+        console.error(err);
         removeTyping();
         addBotMessage(getBotReply(text));
+        if (!apiNoticeShown) {
+          apiNoticeShown = true;
+          addSystemMessage("API 연결이 불안정해서 임시 로컬 응답으로 전환했어.");
+        }
+      } finally {
         sendBtn.disabled = false;
         msgInput.focus();
-      }, delay);
+      }
+    }
+
+    async function requestApiReply(text) {
+      const res = await fetch(CHAT_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          lang: "ko",
+        }),
+      });
+      if (!res.ok) {
+        throw new Error("chat api error: " + res.status);
+      }
+      const data = await res.json();
+      if (!data || typeof data.reply !== "string" || !data.reply.trim()) {
+        throw new Error("empty chat reply");
+      }
+      return data.reply.trim();
     }
 
     // ── UI 헬퍼 ──
@@ -370,18 +409,9 @@
     function addBotMessage(text) {
       const div = document.createElement("div");
       div.className = "msg msg-bot";
-      div.innerHTML = `<div class="bot-name">🫥 OC</div>${escapeHtml(text)}`;
+      div.innerHTML = `<div class="bot-name">${BOT_ICON} ${BOT_NAME}</div>${escapeHtml(text)}`;
       chatMessages.appendChild(div);
       scrollToBottom();
-    }
-
-    function createBotMsgEl() {
-      const div = document.createElement("div");
-      div.className = "msg msg-bot";
-      div._text = "";
-      chatMessages.appendChild(div);
-      scrollToBottom();
-      return div;
     }
 
     function addSystemMessage(text) {
@@ -428,7 +458,7 @@
       images.girl = await loadImage(ASSETS.girl);
       images.boy  = await loadImage(ASSETS.boy);
       resize();
-      connectGW();
+      addSystemMessage(`심심이 채팅 준비 완료 (${CHAT_API_URL})`);
     })().catch(console.error);
   </script>
 </body>
