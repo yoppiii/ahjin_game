@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아진이 게임 - 체스</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap');
+
+    :root{
+      --bg1:#fce4ec;
+      --bg2:#e8eaf6;
+      --bg3:#e0f7fa;
+      --panel:#ffffffd9;
+      --text:#37474f;
+      --light:#f6f2ea;
+      --dark:#9ea7ba;
+      --select:#81d4fa;
+      --hint:#a5d6a7;
+    }
+
+    html, body{
+      height:100%;
+      margin:0;
+      font-family:'Noto Sans KR', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%);
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      overflow:auto;
+      box-sizing:border-box;
+      padding:8px 0;
+    }
+
+    #gameWrap{
+      width:min(94vw, 920px);
+      background: linear-gradient(180deg, #fff5f9 0%, #f0f4ff 40%, #eafaf7 100%);
+      border-radius:24px;
+      box-shadow: 0 10px 36px rgba(0,0,0,0.1);
+      padding:16px;
+      box-sizing:border-box;
+      max-height:calc(100dvh - 16px);
+      overflow:auto;
+    }
+
+    #topBar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .btn{
+      border:none;
+      border-radius:14px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:700;
+      font-family:inherit;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    #backBtn{ background:#fff; color:#666; }
+    #resetBtn{ background:linear-gradient(135deg,#ffd6e8,#ffb6c1); color:#ad1457; }
+    #title{
+      margin:0;
+      font-size:20px;
+      font-weight:900;
+      color:var(--text);
+      letter-spacing:1px;
+    }
+
+    #layout{
+      display:grid;
+      grid-template-columns: minmax(0, 1fr) 230px;
+      gap:12px;
+      align-items:start;
+    }
+    #board{
+      width:100%;
+      aspect-ratio:1/1;
+      max-width:min(100%, calc(100dvh - 140px));
+      border-radius:18px;
+      overflow:hidden;
+      border:3px solid #ffffff;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+      display:grid;
+      grid-template-columns:repeat(8,1fr);
+      grid-template-rows:repeat(8,1fr);
+      user-select:none;
+      touch-action:manipulation;
+    }
+    .square{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      cursor:pointer;
+      transition:filter .14s ease;
+    }
+    .square.light{ background:var(--light); }
+    .square.dark{ background:var(--dark); }
+    .square:hover{ filter:brightness(1.04); }
+    .square.selected{
+      box-shadow: inset 0 0 0 4px var(--select);
+      z-index:2;
+    }
+    .square.hint::after{
+      content:"";
+      width:28%;
+      aspect-ratio:1/1;
+      border-radius:50%;
+      background: color-mix(in oklab, var(--hint) 75%, white);
+      box-shadow: 0 0 0 2px rgba(46,125,50,0.2);
+      position:absolute;
+    }
+    .square.capture::after{
+      content:"";
+      position:absolute;
+      inset:12%;
+      border-radius:50%;
+      border:4px solid rgba(239,83,80,0.75);
+      box-sizing:border-box;
+    }
+    .pieceBadge{
+      width:74%;
+      aspect-ratio:1/1;
+      border-radius:50%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      position:relative;
+      z-index:1;
+      line-height:1;
+      border:2px solid rgba(255,255,255,0.8);
+    }
+    .pieceWhite{
+      background: linear-gradient(180deg, #ffffff 0%, #fff0f5 100%);
+      color:#ad1457;
+    }
+    .pieceBlack{
+      background: linear-gradient(180deg, #546e7a 0%, #37474f 100%);
+      color:#fff6fb;
+    }
+    .pieceIcon{
+      font-size:clamp(18px, 2.5vw, 28px);
+      transform: translateY(1px);
+    }
+    .pieceRole{
+      font-size:clamp(8px, 1vw, 10px);
+      font-weight:900;
+      letter-spacing:.4px;
+      opacity:.88;
+      margin-top:2px;
+    }
+
+    #side{
+      background:var(--panel);
+      border-radius:16px;
+      padding:12px;
+      box-sizing:border-box;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .card{
+      background:#fff;
+      border-radius:12px;
+      padding:10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .label{
+      margin:0 0 6px 0;
+      font-size:12px;
+      color:#8a8d95;
+      font-weight:700;
+    }
+    .value{
+      margin:0;
+      font-size:15px;
+      color:#263238;
+      font-weight:800;
+      min-height:1.3em;
+    }
+    #moves{
+      max-height:280px;
+      overflow:auto;
+      margin:0;
+      padding-left:18px;
+      font-size:13px;
+      line-height:1.45;
+      color:#455a64;
+    }
+    #moves li{ margin-bottom:4px; }
+
+    @media (max-width: 820px){
+      #gameWrap{ width:min(96vw, 900px); }
+    }
+
+    @media (max-width: 700px){
+      #layout{ grid-template-columns: 1fr; }
+      #side{ order:2; }
+      #board{
+        max-width:min(100%, calc(100dvh - 360px));
+        margin:0 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrap">
+    <div id="topBar">
+      <button id="backBtn" class="btn">← 메인</button>
+      <h1 id="title">체스 게임</h1>
+      <button id="resetBtn" class="btn">새 게임</button>
+    </div>
+
+    <div id="layout">
+      <div id="board"></div>
+
+      <aside id="side">
+        <div class="card">
+          <p class="label">현재 턴</p>
+          <p id="turnText" class="value"></p>
+        </div>
+        <div class="card">
+          <p class="label">상태</p>
+          <p id="statusText" class="value"></p>
+        </div>
+        <div class="card">
+          <p class="label">대전 모드</p>
+          <p id="modeText" class="value">플레이어(백) vs 쉬운 AI(흑)</p>
+        </div>
+        <div class="card">
+          <p class="label">기보 (SAN)</p>
+          <ol id="moves"></ol>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script type="module">
+    import { Chess } from "https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm";
+
+    const USER_NAME_KEY = "AHJIN_USER_NAME";
+    const params = new URLSearchParams(location.search);
+    const gender = params.get("gender") === "boy" ? "boy" : "girl";
+    const userName = (params.get("name") || localStorage.getItem(USER_NAME_KEY) || "").trim();
+    if (userName) localStorage.setItem(USER_NAME_KEY, userName);
+
+    const boardEl = document.getElementById("board");
+    const turnText = document.getElementById("turnText");
+    const statusText = document.getElementById("statusText");
+    const modeText = document.getElementById("modeText");
+    const movesEl = document.getElementById("moves");
+    const backBtn = document.getElementById("backBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const game = new Chess();
+    let selectedSquare = null;
+    let legalTargets = [];
+    let aiThinking = false;
+    const playerColor = "w";
+    const aiColor = "b";
+
+    const PIECE_TO_CUTE = {
+      p: { icon: "🐰", role: "P" },
+      n: { icon: "🦄", role: "N" },
+      b: { icon: "🪄", role: "B" },
+      r: { icon: "🏰", role: "R" },
+      q: { icon: "👸", role: "Q" },
+      k: { icon: "👑", role: "K" },
+    };
+    const FILES = ["a","b","c","d","e","f","g","h"];
+
+    function squareName(row, col){
+      return `${FILES[col]}${8 - row}`;
+    }
+
+    function squareColor(row, col){
+      return ((row + col) % 2 === 0) ? "light" : "dark";
+    }
+
+    function resetSelection(){
+      selectedSquare = null;
+      legalTargets = [];
+    }
+
+    function getPieceMarkup(square){
+      const piece = game.get(square);
+      if (!piece) return "";
+      const cute = PIECE_TO_CUTE[piece.type];
+      if (!cute) return "";
+      const colorClass = piece.color === "w" ? "pieceWhite" : "pieceBlack";
+      return `<span class="pieceBadge ${colorClass}"><span class="pieceIcon">${cute.icon}</span><span class="pieceRole">${cute.role}</span></span>`;
+    }
+
+    function isTarget(square){
+      return legalTargets.some((m)=>m.to === square);
+    }
+
+    function isCaptureTarget(square){
+      return legalTargets.some((m)=>m.to === square && m.flags.includes("c"));
+    }
+
+    function buildMoveList(){
+      const history = game.history();
+      movesEl.innerHTML = "";
+      for(let i=0; i<history.length; i+=2){
+        const li = document.createElement("li");
+        const white = history[i] || "";
+        const black = history[i+1] || "";
+        li.textContent = `${Math.floor(i/2)+1}. ${white}${black ? `  ${black}` : ""}`;
+        movesEl.appendChild(li);
+      }
+      movesEl.scrollTop = movesEl.scrollHeight;
+    }
+
+    function buildStatusText(){
+      const turn = game.turn() === "w" ? "백(White)" : "흑(Black)";
+      turnText.textContent = aiThinking ? "AI 생각 중..." : turn;
+      modeText.textContent = "플레이어(백) vs 쉬운 AI(흑)";
+
+      if (game.isCheckmate()) {
+        statusText.textContent = `체크메이트! ${turn} 패배`;
+        return;
+      }
+      if (game.isStalemate()) {
+        statusText.textContent = "스테일메이트 (무승부)";
+        return;
+      }
+      if (game.isDraw()) {
+        statusText.textContent = "무승부";
+        return;
+      }
+      if (game.isCheck()) {
+        statusText.textContent = "체크!";
+        return;
+      }
+      statusText.textContent = "진행 중";
+    }
+
+    function drawBoard(){
+      boardEl.innerHTML = "";
+
+      for(let row=0; row<8; row++){
+        for(let col=0; col<8; col++){
+          const sq = squareName(row, col);
+          const piece = game.get(sq);
+
+          const cell = document.createElement("button");
+          cell.type = "button";
+          cell.className = `square ${squareColor(row, col)}`;
+          if (selectedSquare === sq) cell.classList.add("selected");
+          if (isTarget(sq)) cell.classList.add("hint");
+          if (isCaptureTarget(sq)) cell.classList.add("capture");
+          cell.dataset.square = sq;
+          cell.innerHTML = piece ? getPieceMarkup(sq) : "";
+          boardEl.appendChild(cell);
+        }
+      }
+
+      buildStatusText();
+      buildMoveList();
+    }
+
+    function selectSquare(square){
+      selectedSquare = square;
+      legalTargets = game.moves({ square, verbose: true });
+    }
+
+    function handleSquareClick(square){
+      if (game.isGameOver() || aiThinking) return;
+      if (game.turn() !== playerColor) return;
+
+      const piece = game.get(square);
+
+      if (!selectedSquare) {
+        if (!piece || piece.color !== game.turn()) return;
+        selectSquare(square);
+        drawBoard();
+        return;
+      }
+
+      if (selectedSquare === square) {
+        resetSelection();
+        drawBoard();
+        return;
+      }
+
+      if (piece && piece.color === game.turn()) {
+        selectSquare(square);
+        drawBoard();
+        return;
+      }
+
+      const chosen = legalTargets.find((m)=>m.to === square);
+      if (!chosen) {
+        resetSelection();
+        drawBoard();
+        return;
+      }
+
+      const move = game.move({
+        from: selectedSquare,
+        to: square,
+        promotion: "q",
+      });
+
+      if (!move) return;
+
+      resetSelection();
+      drawBoard();
+      scheduleAiMove();
+    }
+
+    function scheduleAiMove(){
+      if (game.isGameOver()) return;
+      if (game.turn() !== aiColor) return;
+
+      aiThinking = true;
+      drawBoard();
+
+      const delay = 380 + Math.floor(Math.random() * 520);
+      setTimeout(() => {
+        const legal = game.moves({ verbose: true });
+        if (!legal.length) {
+          aiThinking = false;
+          drawBoard();
+          return;
+        }
+        const randomMove = legal[Math.floor(Math.random() * legal.length)];
+        game.move({
+          from: randomMove.from,
+          to: randomMove.to,
+          promotion: "q",
+        });
+        aiThinking = false;
+        drawBoard();
+      }, delay);
+    }
+
+    boardEl.addEventListener("click", (e)=>{
+      const cell = e.target.closest(".square");
+      if (!cell) return;
+      handleSquareClick(cell.dataset.square);
+    });
+
+    function withCommonParams(path) {
+      const q = new URLSearchParams();
+      q.set("gender", gender);
+      if (userName) q.set("name", userName);
+      return `${path}?${q.toString()}`;
+    }
+
+    backBtn.onclick = ()=>{
+      location.href = withCommonParams("main.html");
+    };
+
+    resetBtn.onclick = ()=>{
+      game.reset();
+      resetSelection();
+      aiThinking = false;
+      drawBoard();
+    };
+
+    drawBoard();
+  </script>
+</body>
+</html>

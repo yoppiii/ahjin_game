@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아진이 게임 - 시작</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap');
+
+    html, body {
+      height:100%; margin:0;
+      background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 50%, #e0f7fa 100%);
+      font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+      display:flex; justify-content:center; align-items:center;
+    }
+    #gameWrap{
+      aspect-ratio:3/4;
+      height:100vh; max-height:100vh; width:auto;
+      background: linear-gradient(180deg, #fff5f9 0%, #f0f4ff 40%, #eafaf7 100%);
+      position:relative; overflow:hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    /* 타이틀 */
+    #title {
+      position:absolute; top:5%; left:50%; transform:translateX(-50%);
+      z-index:30; text-align:center;
+    }
+    #title h1 {
+      font-size:28px; font-weight:900;
+      background: linear-gradient(135deg, #f48fb1, #ce93d8, #81d4fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin:0; letter-spacing:2px;
+      text-shadow: none;
+    }
+    #title p {
+      font-size:13px; color:#aaa; margin:6px 0 0 0; font-weight:500;
+    }
+
+    /* 성별 선택 */
+    #genderUI{
+      position:absolute; top:18%; left:50%; transform:translateX(-50%);
+      display:flex; gap:12px; z-index:30;
+    }
+    .gender-btn {
+      padding:10px 28px;
+      border-radius:24px;
+      border:2px solid transparent;
+      font-weight:700;
+      font-size:15px;
+      cursor:pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: all 0.25s ease;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .gender-btn:active { transform: scale(0.95); }
+
+    #btnGirl {
+      background: linear-gradient(135deg, #ffd6e8 0%, #ffb6c1 100%);
+      color: #c2185b;
+    }
+    #btnGirl.active {
+      border-color: #f48fb1;
+      box-shadow: 0 4px 16px rgba(244,143,177,0.4);
+    }
+
+    #btnBoy {
+      background: linear-gradient(135deg, #d6eaff 0%, #b3d4fc 100%);
+      color: #1565c0;
+    }
+    #btnBoy.active {
+      border-color: #64b5f6;
+      box-shadow: 0 4px 16px rgba(100,181,246,0.4);
+    }
+
+    /* 시작 팝업 */
+    #startModal{
+      position:absolute; inset:0;
+      z-index:60;
+      display:none;
+      align-items:center; justify-content:center;
+      background: rgba(18, 24, 38, 0.28);
+      backdrop-filter: blur(2px);
+    }
+    #startModal.open{ display:flex; }
+    #startModalCard{
+      width:min(84%, 320px);
+      background: rgba(255,255,255,0.93);
+      border-radius:20px;
+      box-shadow: 0 10px 34px rgba(0,0,0,0.15);
+      padding:16px;
+      box-sizing:border-box;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    #startModalTitle{
+      margin:0; text-align:center;
+      font-size:17px; font-weight:900; color:#5c5c66;
+    }
+    #closeModalBtn{
+      align-self:flex-end;
+      width:30px; height:30px; border:none; border-radius:50%;
+      background:#f3f4f8; color:#8f94a3; font-weight:900;
+      cursor:pointer; line-height:1;
+    }
+    #nameInput{
+      width:100%; height:42px;
+      border:none; border-radius:22px;
+      box-sizing:border-box; padding:0 16px;
+      font-size:14px; font-weight:700;
+      font-family:'Noto Sans KR', sans-serif;
+      color:#5c5c66;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      outline:none;
+      text-align:center;
+    }
+    #nameInput::placeholder{ color:#b3b3bf; }
+    #startWithNameBtn{
+      height:40px; border:none; border-radius:20px;
+      background: linear-gradient(135deg, #ffd6e8 0%, #ffb6c1 100%);
+      color:#c2185b; font-weight:900;
+      font-family:'Noto Sans KR', sans-serif;
+      cursor:pointer;
+    }
+    .modal-divider{
+      text-align:center; font-size:12px; color:#a2a7b5; font-weight:700;
+      margin:2px 0;
+    }
+    #continueRow{
+      display:flex; gap:8px; align-items:center;
+    }
+    #savedNames{
+      flex:1; height:40px;
+      border:none; border-radius:20px;
+      box-sizing:border-box; padding:0 12px;
+      background: rgba(255,255,255,0.85);
+      color:#666; font-weight:700;
+      font-family:'Noto Sans KR', sans-serif;
+      outline:none;
+    }
+    #continueBtn{
+      height:40px; padding:0 14px;
+      border:none; border-radius:20px;
+      background: linear-gradient(135deg, #d6eaff 0%, #b3d4fc 100%);
+      color:#1565c0; font-weight:900;
+      font-family:'Noto Sans KR', sans-serif;
+      cursor:pointer;
+    }
+
+    /* 시작 버튼 */
+    #startBtn{
+      position:absolute; bottom:5%; left:50%; transform:translateX(-50%);
+      z-index:30;
+      padding:16px 60px;
+      border-radius:30px;
+      border:none;
+      background: linear-gradient(135deg, #f48fb1 0%, #ce93d8 50%, #81d4fa 100%);
+      color:#fff;
+      font-size:20px;
+      font-weight:900;
+      cursor:pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      box-shadow: 0 6px 24px rgba(206,147,216,0.4);
+      letter-spacing:4px;
+      transition: all 0.25s ease;
+    }
+    #startBtn:hover {
+      box-shadow: 0 8px 32px rgba(206,147,216,0.6);
+    }
+    #startBtn:active { transform: translateX(-50%) scale(0.95); }
+
+    /* 하단 장식 */
+    .deco-dots {
+      position:absolute; bottom:2%; left:50%; transform:translateX(-50%);
+      display:flex; gap:6px; z-index:25;
+    }
+    .deco-dot {
+      width:6px; height:6px; border-radius:50%;
+      opacity:0.3;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrap">
+    <div id="title">
+      <h1>아진이 게임</h1>
+      <p>캐릭터를 선택하세요 ✨</p>
+    </div>
+
+    <div id="genderUI">
+      <button id="btnGirl" class="gender-btn active">👧 여자</button>
+      <button id="btnBoy" class="gender-btn">👦 남자</button>
+    </div>
+
+    <button id="startBtn">시작</button>
+
+    <div id="startModal" aria-hidden="true">
+      <div id="startModalCard">
+        <button id="closeModalBtn" type="button" aria-label="팝업 닫기">×</button>
+        <h2 id="startModalTitle">플레이 방법 선택</h2>
+        <input id="nameInput" type="text" maxlength="20" placeholder="새 이름 입력" autocomplete="name" />
+        <button id="startWithNameBtn" type="button">새 이름으로 시작</button>
+        <div class="modal-divider">또는</div>
+        <div id="continueRow">
+          <select id="savedNames"></select>
+          <button id="continueBtn" type="button">이어하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="deco-dots">
+      <div class="deco-dot" style="background:#f48fb1;"></div>
+      <div class="deco-dot" style="background:#ce93d8;"></div>
+      <div class="deco-dot" style="background:#81d4fa;"></div>
+      <div class="deco-dot" style="background:#a5d6a7;"></div>
+      <div class="deco-dot" style="background:#ffe082;"></div>
+    </div>
+
+    <canvas id="game"></canvas>
+  </div>
+
+  <script>
+    const ASSETS = { girl: "girl.png", boy: "boy.png" };
+    const USER_NAME_KEY = "AHJIN_USER_NAME";
+    const USER_NAMES_KEY = "AHJIN_USER_NAMES_V1";
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const startModal = document.getElementById("startModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const startBtn = document.getElementById("startBtn");
+    const nameInput = document.getElementById("nameInput");
+    const startWithNameBtn = document.getElementById("startWithNameBtn");
+    const savedNames = document.getElementById("savedNames");
+    const continueBtn = document.getElementById("continueBtn");
+
+    let images = {};
+    let gender = "girl";
+    let userName = "";
+
+    const params = new URLSearchParams(location.search);
+    const paramGender = params.get("gender");
+    const paramName = params.get("name");
+    if (paramGender === "boy") gender = "boy";
+    userName = (paramName || localStorage.getItem(USER_NAME_KEY) || "").trim();
+
+    function loadUserNames() {
+      try {
+        const raw = localStorage.getItem(USER_NAMES_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(list)) return [];
+        const set = new Set();
+        for (const v of list) {
+          const n = String(v || "").trim();
+          if (n) set.add(n);
+        }
+        return Array.from(set);
+      } catch {
+        return [];
+      }
+    }
+
+    function saveUserNames(list) {
+      localStorage.setItem(USER_NAMES_KEY, JSON.stringify(list));
+    }
+
+    function registerUserName(name) {
+      const n = String(name || "").trim();
+      if (!n) return;
+      const list = loadUserNames();
+      if (!list.includes(n)) {
+        list.push(n);
+        saveUserNames(list);
+      }
+    }
+
+    function refreshSavedNames() {
+      const list = loadUserNames();
+      savedNames.innerHTML = "";
+      if (!list.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "저장된 이름 없음";
+        savedNames.appendChild(opt);
+        savedNames.disabled = true;
+        continueBtn.disabled = true;
+        return;
+      }
+      const emptyOpt = document.createElement("option");
+      emptyOpt.value = "";
+      emptyOpt.textContent = "기존 이름 선택";
+      savedNames.appendChild(emptyOpt);
+      for (const name of list) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        savedNames.appendChild(opt);
+      }
+      savedNames.disabled = false;
+      continueBtn.disabled = false;
+      if (userName && list.includes(userName)) {
+        savedNames.value = userName;
+      } else {
+        savedNames.value = "";
+      }
+    }
+
+    function goMainWithName(name) {
+      const q = new URLSearchParams();
+      q.set("gender", gender);
+      q.set("name", name);
+      location.href = `main.html?${q.toString()}`;
+    }
+
+    function openStartModal() {
+      refreshSavedNames();
+      nameInput.value = userName;
+      startModal.classList.add("open");
+      startModal.setAttribute("aria-hidden", "false");
+      nameInput.focus();
+      nameInput.select();
+    }
+
+    function closeStartModal() {
+      startModal.classList.remove("open");
+      startModal.setAttribute("aria-hidden", "true");
+    }
+
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw();
+    }
+    window.addEventListener("resize", resize);
+
+    function loadImage(src){
+      return new Promise((res, rej)=>{
+        const img = new Image();
+        img.onload = ()=>res(img);
+        img.onerror = ()=>rej(new Error("이미지 로드 실패: " + src));
+        img.src = src;
+      });
+    }
+
+    const btnGirl = document.getElementById("btnGirl");
+    const btnBoy  = document.getElementById("btnBoy");
+
+    btnGirl.onclick = ()=>setGender("girl");
+    btnBoy.onclick  = ()=>setGender("boy");
+
+    function setGender(g){
+      gender = g;
+      btnGirl.classList.toggle("active", g==="girl");
+      btnBoy.classList.toggle("active", g==="boy");
+      draw();
+    }
+
+    function draw(){
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);
+
+      const img = images[gender];
+      if(!img) return;
+
+      const targetH = h * 0.62;
+      const scale = targetH / img.height;
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+
+      const bottomReserved = 90;
+      const x = (w - dw) / 2;
+      const y = h - dh - bottomReserved;
+
+      ctx.drawImage(img, x, y, dw, dh);
+    }
+
+    startBtn.onclick = ()=> {
+      openStartModal();
+    };
+
+    startWithNameBtn.onclick = ()=> {
+      const inputName = nameInput.value.trim();
+      if (!inputName) {
+        alert("이름을 입력해줘!");
+        nameInput.focus();
+        return;
+      }
+      userName = inputName;
+      localStorage.setItem(USER_NAME_KEY, userName);
+      registerUserName(userName);
+      refreshSavedNames();
+      goMainWithName(userName);
+    };
+
+    continueBtn.onclick = ()=> {
+      const picked = String(savedNames.value || "").trim();
+      if (!picked) {
+        alert("이어서 할 이름을 선택해줘!");
+        return;
+      }
+      userName = picked;
+      localStorage.setItem(USER_NAME_KEY, userName);
+      goMainWithName(userName);
+    };
+
+    closeModalBtn.onclick = closeStartModal;
+    startModal.addEventListener("click", (e)=>{
+      if (e.target === startModal) closeStartModal();
+    });
+    nameInput.addEventListener("keydown", (e)=>{
+      if (e.key === "Enter" && !e.isComposing) {
+        e.preventDefault();
+        startWithNameBtn.click();
+      }
+    });
+
+    (async function init(){
+      images.girl = await loadImage(ASSETS.girl);
+      images.boy  = await loadImage(ASSETS.boy);
+
+      btnGirl.classList.toggle("active", gender==="girl");
+      btnBoy.classList.toggle("active", gender==="boy");
+      refreshSavedNames();
+
+      resize();
+    })().catch(err=>{
+      console.error(err);
+      alert(err.message);
+    });
+  </script>
+</body>
+</html>

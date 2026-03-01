@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아진이 게임</title>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #f6f6f6;
+      font-family: system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #gameWrap {
+      aspect-ratio: 3 / 4; /* iPad 세로 */
+      height: 100vh;
+      max-height: 100vh;
+      width: auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas { width: 100%; height: 100%; display: block; }
+
+    button {
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid #cfcfcf;
+      background: #fff;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button.active { border-color: #111; }
+
+    /* 좌측 상단 */
+    #genderUI {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 30;
+    }
+
+    /* 뒤로가기(메인에서만) */
+    #backBtn {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 30;
+      display: none;
+    }
+
+    /* 방송(항상 유지) */
+    #broadcastBtn {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #ffe066;
+      border-color: #f2c94c;
+      z-index: 30;
+    }
+
+    /* 시작(인트로에서만) */
+    #startBtn {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 16px 48px;
+      font-size: 20px;
+      z-index: 30;
+    }
+
+    /* 메인 UI는 main_scene.js에서 채움 */
+    #mainUIRoot {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      pointer-events: none;
+    }
+    #mainUIRoot .clickable { pointer-events: auto; }
+  </style>
+</head>
+
+<body>
+  <div id="gameWrap">
+    <div id="genderUI">
+      <button id="btnGirl" class="active">여자</button>
+      <button id="btnBoy">남자</button>
+    </div>
+
+    <button id="backBtn">뒤로</button>
+    <button id="broadcastBtn">방송</button>
+    <button id="startBtn">시작</button>
+
+    <!-- 메인 UI가 여기에 동적으로 붙음 -->
+    <div id="mainUIRoot"></div>
+
+    <canvas id="game"></canvas>
+  </div>
+
+  <script type="module">
+    import { createGame } from "./shared_canvas.js";
+
+    // 1) 캔버스/캐릭터 렌더(가벼운 공용 모듈)
+    const game = await createGame({
+      canvas: document.getElementById("game"),
+      assets: { girl: "girl.png", boy: "boy.png" }
+    });
+
+    // 2) 인트로 UI
+    const genderUI = document.getElementById("genderUI");
+    const btnGirl  = document.getElementById("btnGirl");
+    const btnBoy   = document.getElementById("btnBoy");
+    const startBtn = document.getElementById("startBtn");
+    const backBtn  = document.getElementById("backBtn");
+    const broadcastBtn = document.getElementById("broadcastBtn");
+    const mainUIRoot = document.getElementById("mainUIRoot");
+
+    btnGirl.onclick = () => {
+      game.setGender("girl");
+      btnGirl.classList.add("active");
+      btnBoy.classList.remove("active");
+    };
+    btnBoy.onclick = () => {
+      game.setGender("boy");
+      btnBoy.classList.add("active");
+      btnGirl.classList.remove("active");
+    };
+
+    broadcastBtn.onclick = () => alert("📡 방송 (다음 단계에서 연결)");
+
+    let mainScene = null; // 동적 로드한 메인 씬 핸들
+
+    // 3) 시작 누르면: 무거운 메인 UI/기능을 그때 import()
+    startBtn.onclick = async () => {
+      startBtn.disabled = true;
+      startBtn.textContent = "로딩...";
+      try {
+        const mod = await import("./main_scene.js"); // ✅ 여기서만 로드됨
+        mainScene = await mod.enterMainScene({
+          root: mainUIRoot,
+          onNavigate: (name) => alert("메뉴: " + name),
+        });
+
+        // UI 상태 전환
+        startBtn.style.display = "none";
+        genderUI.style.display = "none";
+        backBtn.style.display = "block";
+        mainUIRoot.style.display = "block";
+
+        // 캐릭터 크기 유지 + 위치만 조정
+        game.setLayoutMode("main"); // 아래 shared_canvas.js에 구현됨
+      } catch (e) {
+        console.error(e);
+        alert("메인 로딩 실패: " + (e?.message || e));
+      } finally {
+        startBtn.disabled = false;
+        startBtn.textContent = "시작";
+      }
+    };
+
+    // 4) 뒤로가기: 메인 UI 제거하고 인트로로
+    backBtn.onclick = () => {
+      if (mainScene) {
+        mainScene.destroy(); // 이벤트 정리
+        mainScene = null;
+      }
+      mainUIRoot.innerHTML = "";
+      mainUIRoot.style.display = "none";
+
+      backBtn.style.display = "none";
+      genderUI.style.display = "flex";
+      startBtn.style.display = "block";
+
+      game.setLayoutMode("intro");
+    };
+  </script>
+</body>
+</html>

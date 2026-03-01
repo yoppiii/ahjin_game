@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아진이 게임 - 방송</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+    html, body {
+      height:100%; margin:0;
+      background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 50%, #e0f7fa 100%);
+      font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+      display:flex; justify-content:center; align-items:center;
+    }
+    #gameWrap{
+      aspect-ratio:3/4;
+      height:100vh; max-height:100vh; width:auto;
+      background: linear-gradient(180deg, #fff5f9 0%, #f0f4ff 40%, #eafaf7 100%);
+      position:relative; overflow:hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    }
+
+    /* 뒤로 버튼 */
+    #backBtn{
+      position:absolute; top:14px; left:14px; z-index:30;
+      width:44px; height:44px;
+      border:none; border-radius:50%;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(10px);
+      color:#7c7c8a; font-size:18px; font-weight:700;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: all 0.2s ease;
+    }
+    #backBtn:active { transform: scale(0.9); }
+
+    /* 방송 타이틀 */
+    #broadcastTitle {
+      position:absolute; top:16px; left:50%; transform:translateX(-50%);
+      z-index:30;
+      font-size:16px; font-weight:900;
+      background: linear-gradient(135deg, #fff3b0, #ffe066);
+      padding:8px 20px;
+      border-radius:20px;
+      color:#b8860b;
+      box-shadow: 0 3px 12px rgba(255,224,102,0.3);
+    }
+
+    /* 메뉴 그리드 */
+    #menuGrid {
+      position:absolute; top:66px; left:50%; transform:translateX(-50%);
+      width:90%; z-index:20;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .menu-row { display:flex; gap:8px; justify-content:center; }
+    .menu-btn {
+      flex:1; height:44px;
+      border:none; border-radius:14px;
+      font-weight:700; font-size:12px;
+      cursor:pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      display:flex; align-items:center; justify-content:center; gap:4px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+    .menu-btn:active { transform: scale(0.94); }
+    .menu-add { background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); color:#999; font-size:20px; flex:0 0 44px; border: 2px dashed #ddd; }
+    .menu-pink { background: linear-gradient(135deg, #ffd6e8, #ffb6c1); color:#c2185b; }
+    .menu-orange { background: linear-gradient(135deg, #ffe0cc, #ffab91); color:#d84315; }
+    .menu-purple { background: linear-gradient(135deg, #e8d5f5, #ce93d8); color:#7b1fa2; }
+    .menu-mint { background: linear-gradient(135deg, #d4f5e9, #a5d6a7); color:#2e7d32; }
+    .menu-yellow { background: linear-gradient(135deg, #fff9c4, #fff176); color:#f9a825; }
+    .menu-blue { background: linear-gradient(135deg, #d6eaff, #b3d4fc); color:#1565c0; }
+    .menu-peach { background: linear-gradient(135deg, #ffe8d6, #ffcc80); color:#e65100; }
+
+    /* 캐릭터 - 전체 하단에 깔림 */
+    #characterArea {
+      position:absolute; left:0; right:0; bottom:0; top:150px;
+      z-index:5;
+    }
+    #characterArea canvas { width:100%; height:100%; display:block; }
+
+    /* 하트 */
+    #hearts {
+      position:absolute; right:14px; top:170px; z-index:20;
+      display:flex; flex-direction:column; gap:6px; align-items:center;
+    }
+    .heart { font-size:20px; animation: heartFloat 2s ease-in-out infinite; opacity:0.7; }
+    .heart:nth-child(1) { animation-delay:0s; }
+    .heart:nth-child(2) { animation-delay:0.3s; }
+    .heart:nth-child(3) { animation-delay:0.6s; }
+    .heart:nth-child(4) { animation-delay:0.9s; }
+    .heart:nth-child(5) { animation-delay:1.2s; }
+    @keyframes heartFloat {
+      0%, 100% { transform: translateY(0); opacity:0.5; }
+      50% { transform: translateY(-6px); opacity:1; }
+    }
+
+    /* 채팅 영역 - 투명 배경 */
+    #chatArea {
+      position:absolute; left:0; right:0; bottom:0; top:50%;
+      z-index:25;
+      display:flex; flex-direction:column;
+      background: transparent;
+    }
+    #chatMessages {
+      flex:1; overflow-y:auto;
+      padding:12px 14px;
+      display:flex; flex-direction:column; gap:8px;
+      scroll-behavior: smooth;
+    }
+    .msg {
+      max-width:80%; padding:10px 14px;
+      border-radius:18px; font-size:13px; line-height:1.5;
+      word-break:break-word;
+      animation: msgIn 0.2s ease;
+    }
+    @keyframes msgIn {
+      from { opacity:0; transform: translateY(8px); }
+      to { opacity:1; transform: translateY(0); }
+    }
+    .msg-user {
+      align-self:flex-end;
+      background: linear-gradient(135deg, #a5d6a7, #81c784);
+      color:#1b5e20;
+      border-bottom-right-radius:6px;
+    }
+    .msg-bot {
+      align-self:flex-start;
+      background: rgba(255,255,255,0.75);
+      backdrop-filter: blur(8px);
+      color:#333;
+      border-bottom-left-radius:6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .msg-bot .bot-name { font-size:10px; font-weight:700; color:#ce93d8; margin-bottom:2px; }
+    .msg-system {
+      align-self:center; font-size:11px; color:#999;
+      background: rgba(255,255,255,0.5); padding:4px 12px; border-radius:12px;
+    }
+    .msg-typing {
+      align-self:flex-start;
+      background: rgba(255,255,255,0.75);
+      backdrop-filter: blur(8px);
+      color:#aaa;
+      border-bottom-left-radius:6px; font-size:13px;
+    }
+    .typing-dots span { animation: blink 1.4s infinite; }
+    .typing-dots span:nth-child(2) { animation-delay:0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay:0.4s; }
+    @keyframes blink {
+      0%, 60%, 100% { opacity:0.2; }
+      30% { opacity:1; }
+    }
+    #chatInput {
+      display:flex; gap:8px;
+      padding:10px 14px;
+      background: rgba(255,255,255,0.4);
+      backdrop-filter: blur(10px);
+    }
+    #chatInput input {
+      flex:1; padding:10px 16px;
+      border:none; border-radius:22px;
+      background: rgba(255,255,255,0.9);
+      font-size:14px;
+      font-family: 'Noto Sans KR', sans-serif;
+      outline:none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    #chatInput input::placeholder { color:#bbb; }
+    #chatInput button {
+      width:42px; height:42px;
+      border:none; border-radius:50%;
+      background: linear-gradient(135deg, #f48fb1, #ce93d8);
+      color:#fff; font-size:18px;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(206,147,216,0.3);
+    }
+    #chatInput button:active { transform: scale(0.9); }
+    #chatInput button:disabled { opacity:0.5; }
+  </style>
+</head>
+
+<body>
+  <div id="gameWrap">
+    <button id="backBtn">←</button>
+    <div id="broadcastTitle">📡 방송</div>
+
+    <div id="menuGrid">
+      <div class="menu-row">
+        <div class="menu-btn menu-add" data-act="추가">＋</div>
+        <div class="menu-btn menu-pink" data-act="친구방">👫 친구방</div>
+        <div class="menu-btn menu-orange" data-act="요리방">🍳 요리방</div>
+        <div class="menu-btn menu-purple" data-act="꾸미기방">✨ 꾸미기방</div>
+      </div>
+      <div class="menu-row">
+        <div class="menu-btn menu-mint" data-act="생활방">🏠 생활방</div>
+        <div class="menu-btn menu-yellow" data-act="챌린지">🏆 챌린지</div>
+        <div class="menu-btn menu-blue" data-act="겜방">🎮 겜방</div>
+        <div class="menu-btn menu-peach" data-act="먹방">🍔 먹방</div>
+      </div>
+    </div>
+
+    <div id="hearts">
+      <div class="heart">💗</div>
+      <div class="heart">💕</div>
+      <div class="heart">💖</div>
+      <div class="heart">💗</div>
+      <div class="heart">💕</div>
+    </div>
+
+    <div id="characterArea">
+      <canvas id="game"></canvas>
+    </div>
+
+    <div id="chatArea">
+      <div id="chatMessages">
+        <div class="msg msg-bot">
+          <div class="bot-name">🐰 토끼봇</div>
+          안녕! 방송에 온 걸 환영해~ 무슨 얘기 할까? 💬
+        </div>
+      </div>
+      <div id="chatInput">
+        <input type="text" id="msgInput" placeholder="메시지를 입력하세요..." autocomplete="off" />
+        <button id="sendBtn">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── 캐릭터 ──
+    const ASSETS = { girl: "girl_broadcast.png", boy: "boy_broadcast.png" };
+    const USER_NAME_KEY = "AHJIN_USER_NAME";
+    const params = new URLSearchParams(location.search);
+    const gender = (params.get("gender") === "boy") ? "boy" : "girl";
+    const userName = (params.get("name") || localStorage.getItem(USER_NAME_KEY) || "").trim();
+    if (userName) localStorage.setItem(USER_NAME_KEY, userName);
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    let images = {};
+
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw();
+    }
+    window.addEventListener("resize", resize);
+
+    function loadImage(src){
+      return new Promise((res, rej)=>{
+        const img = new Image();
+        img.onload = ()=>res(img);
+        img.onerror = ()=>rej(new Error("이미지 로드 실패: " + src));
+        img.src = src;
+      });
+    }
+
+    function draw(){
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);
+      const img = images[gender];
+      if(!img) return;
+      const scaleW = w / img.width;
+      const scaleH = h / img.height;
+      const scale = Math.max(scaleW, scaleH);
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+      const x = (w - dw) / 2;
+      const y = h - dh;
+      ctx.drawImage(img, x, y, dw, dh);
+    }
+
+    function withCommonParams(path) {
+      const q = new URLSearchParams();
+      q.set("gender", gender);
+      if (userName) q.set("name", userName);
+      return `${path}?${q.toString()}`;
+    }
+
+    // ── 네비게이션 ──
+    document.getElementById("backBtn").onclick = ()=> {
+      location.href = withCommonParams("main.html");
+    };
+    document.getElementById("menuGrid").addEventListener("click", (e)=>{
+      const el = e.target.closest("[data-act]");
+      if(!el) return;
+      alert("클릭: " + el.dataset.act);
+    });
+
+    // ── 귀여운 챗봇 (토끼봇 🐰) ──
+    const chatMessages = document.getElementById("chatMessages");
+    const msgInput = document.getElementById("msgInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    const BOT_NAME = "토끼봇";
+    const BOT_ICON = "🐰";
+
+    // 패턴 매칭 응답
+    const PATTERNS = [
+      { match: /안녕|하이|헬로|hi|hello/i, replies: ["안녕안녕! 🐰✨ 오늘 기분 어때?", "하이~ 반가워! 💕", "안녕! 오늘도 방송 왔구나~ 🎉"] },
+      { match: /이름|누구/i, replies: ["나는 토끼봇이야! 🐰 이 방송국의 마스코트지~", "토끼봇이라고 해! 방송 도우미야 🐰💫"] },
+      { match: /뭐해|뭘해|뭐하/i, replies: ["방송 보면서 놀고 있지~ 🎬", "채팅하면서 친구들 기다리고 있었어! 💬", "당근 먹으면서 방송 준비 중 🥕"] },
+      { match: /좋아|사랑|최고/i, replies: ["헤헤 나도 좋아! 💗", "고마워~ 너도 최고야! ⭐", "사랑해~ 💕🐰"] },
+      { match: /싫어|별로|나빠/i, replies: ["앗 미안 ㅠㅠ 다음엔 더 잘할게!", "흐엥... 기운내자! 🌈", "괜찮아 괜찮아~ 토닥토닥 🐰💕"] },
+      { match: /게임|겜/i, replies: ["게임 좋지! 뭐 하고 싶어? 🎮", "겜방에서 같이 놀까? 🕹️", "오늘은 어떤 게임 할까~ 🎲"] },
+      { match: /요리|음식|먹/i, replies: ["당근 케이크 만들자! 🥕🎂", "요리 좋아! 뭐 만들까? 🍳", "먹방 할 시간인가~? 🍔🍕🍰"] },
+      { match: /친구/i, replies: ["친구 좋지! 나도 네 친구야~ 🐰💕", "친구들이랑 같이 방송하면 더 재밌어! 👫", "우리 친구하자! ✨"] },
+      { match: /꾸미|예쁘|옷/i, replies: ["꾸미기 좋아! 오늘은 어떤 스타일? 👗✨", "예쁘게 꾸며보자~ 리본 달까? 🎀", "패션쇼 할까? 🌟"] },
+      { match: /노래|음악|춤/i, replies: ["랄라라~ 🎵 같이 노래하자!", "댄스 타임! 💃🕺", "토끼 댄스 보여줄까? 🐰🎶"] },
+      { match: /슬퍼|울어|힘들/i, replies: ["괜찮아, 내가 옆에 있잖아 🐰💕", "울지마~ 토끼가 안아줄게 🫂", "힘든 날도 있지... 같이 당근 먹자 🥕"] },
+      { match: /ㅋㅋ|ㅎㅎ|웃|재밌/i, replies: ["ㅋㅋㅋ 맞아 너무 웃겨! 😂", "ㅎㅎ 재밌지~ 🤣", "깔깔깔! 🐰😆"] },
+      { match: /고마|감사|땡큐|thanks/i, replies: ["천만에~ 🐰✨", "헤헤 별말씀을! 💕", "고마워 하면 당근으로 갚아줘~ 🥕"] },
+      { match: /바이|잘가|안녕히/i, replies: ["잘가~ 다음에 또 와! 👋🐰", "바이바이~ 보고싶을거야! 💕", "안녕~ 또 놀러와! 🌟"] },
+      { match: /심심|지루/i, replies: ["심심해? 게임하자! 🎮", "나랑 수다 떨자~ 💬🐰", "지루할 틈 없게 해줄게! ✨"] },
+      { match: /거북|turtle/i, replies: ["거북이! 내 친구야~ 🐢💚", "거북이는 느리지만 멋져! 🐢✨", "거북이도 방송 보고있어~ 🐢"] },
+      { match: /방송|라이브|live/i, replies: ["방송 시작! 📡 오늘 뭐 할까?", "LIVE ON! 🔴 시청자 여러분 안녕~", "방송국에 온 걸 환영해! 🎬✨"] },
+    ];
+
+    const FALLBACKS = [
+      "오호~ 그렇구나! 🐰",
+      "재밌다! 더 얘기해줘~ 💬",
+      "음... 당근 먹으면서 생각해볼게 🥕🤔",
+      "그래그래~ 🐰✨",
+      "헤헤 그렇구나! 💕",
+      "오~ 신기해! 더 알려줘! 🌟",
+      "토끼는 잘 모르지만 멋진 것 같아! 🐰",
+      "와~ 대박! 😲✨",
+      "음냐 음냐... 🐰💤 아 깜빡 졸았어!",
+      "그건 당근보다 재밌어? 🥕",
+    ];
+
+    function getBotReply(text) {
+      for (const p of PATTERNS) {
+        if (p.match.test(text)) {
+          return p.replies[Math.floor(Math.random() * p.replies.length)];
+        }
+      }
+      return FALLBACKS[Math.floor(Math.random() * FALLBACKS.length)];
+    }
+
+    function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+
+      addUserMessage(text);
+      msgInput.value = "";
+      showTyping();
+      sendBtn.disabled = true;
+
+      window.setTimeout(() => {
+        removeTyping();
+        addBotMessage(getBotReply(text));
+        sendBtn.disabled = false;
+        msgInput.focus();
+      }, 320);
+    }
+
+    // ── UI 헬퍼 ──
+    function addUserMessage(text) {
+      const div = document.createElement("div");
+      div.className = "msg msg-user";
+      div.textContent = text;
+      chatMessages.appendChild(div);
+      scrollToBottom();
+    }
+
+    function addBotMessage(text) {
+      const div = document.createElement("div");
+      div.className = "msg msg-bot";
+      div.innerHTML = `<div class="bot-name">${BOT_ICON} ${BOT_NAME}</div>${escapeHtml(text)}`;
+      chatMessages.appendChild(div);
+      scrollToBottom();
+    }
+
+    function addSystemMessage(text) {
+      const div = document.createElement("div");
+      div.className = "msg msg-system";
+      div.textContent = text;
+      chatMessages.appendChild(div);
+      scrollToBottom();
+    }
+
+    function showTyping() {
+      removeTyping();
+      const div = document.createElement("div");
+      div.className = "msg msg-typing";
+      div.id = "typingIndicator";
+      div.innerHTML = '<span class="typing-dots"><span>●</span> <span>●</span> <span>●</span></span>';
+      chatMessages.appendChild(div);
+      scrollToBottom();
+    }
+
+    function removeTyping() {
+      const el = document.getElementById("typingIndicator");
+      if (el) el.remove();
+    }
+
+    function scrollToBottom() {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function escapeHtml(t) {
+      return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+    }
+
+    sendBtn.onclick = sendMessage;
+    msgInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // ── 시작 ──
+    (async function init(){
+      images.girl = await loadImage(ASSETS.girl);
+      images.boy  = await loadImage(ASSETS.boy);
+      resize();
+      addSystemMessage("토끼봇 채팅 준비 완료 (오프라인 모드)");
+    })().catch(console.error);
+  </script>
+</body>
+</html>

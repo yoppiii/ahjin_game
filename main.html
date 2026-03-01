@@ -1,0 +1,1230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아진이 게임 - 메인</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap');
+
+    html, body {
+      height:100%; margin:0;
+      background: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 50%, #e0f7fa 100%);
+      font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+      display:flex; justify-content:center; align-items:center;
+    }
+
+    #gameWrap{
+      aspect-ratio:3/4;
+      height:100vh; max-height:100vh; width:auto;
+      background: linear-gradient(180deg, #fff5f9 0%, #f0f4ff 40%, #eafaf7 100%);
+      border:none; border-radius:0;
+      position:relative; overflow:hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    /* 공통 버튼 */
+    .btn-soft {
+      padding:10px 18px;
+      border-radius:20px;
+      border:none;
+      font-weight:700;
+      cursor:pointer;
+      z-index:30;
+      position:absolute;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size:14px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .btn-soft:active { transform: scale(0.95); }
+
+    #backBtn{
+      top:16px; left:16px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(10px);
+      color:#7c7c8a;
+      border-radius:50%;
+      width:44px; height:44px;
+      padding:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px;
+    }
+    #broadcastBtn{
+      right:16px; top:50%;
+      transform:translateY(-50%);
+      background: linear-gradient(135deg, #fff3b0 0%, #ffe066 100%);
+      color:#b8860b;
+      border-radius:22px;
+      padding:10px 16px;
+      font-size:13px;
+      box-shadow: 0 3px 12px rgba(255,224,102,0.4);
+    }
+    #partyReplayBtn{
+      right:16px; top:16px;
+      display:none;
+      background: linear-gradient(135deg, #d4f5e9 0%, #a5d6a7 100%);
+      color:#1b5e20;
+      border-radius:22px;
+      padding:10px 14px;
+      font-size:13px;
+      box-shadow: 0 3px 12px rgba(165,214,167,0.35);
+    }
+
+    /* 메인 UI */
+    #mainUI { position:absolute; inset:0; z-index:20; pointer-events:none; }
+    #mainUI .clickable { pointer-events:auto; cursor:pointer; }
+
+    /* 왼쪽 패널 */
+    #leftPanel{
+      position:absolute; left:14px; top:68px;
+      width:44%; 
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(12px);
+      border-radius:24px;
+      padding:14px; box-sizing:border-box;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+    .row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+
+    .pill {
+      flex:1; height:42px;
+      border-radius:16px;
+      display:flex; align-items:center; justify-content:center; gap:6px;
+      font-weight:700; font-size:13px;
+      border:none;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .pill:active { transform: scale(0.96); }
+
+    .pill-pink { background: linear-gradient(135deg, #ffd6e8 0%, #ffb6c1 100%); color:#c2185b; }
+    .pill-blue { background: linear-gradient(135deg, #d6eaff 0%, #b3d4fc 100%); color:#1565c0; }
+    .pill-purple { background: linear-gradient(135deg, #e8d5f5 0%, #ce93d8 100%); color:#7b1fa2; }
+    .pill-mint { background: linear-gradient(135deg, #d4f5e9 0%, #a5d6a7 100%); color:#2e7d32; }
+    .pill-peach { background: linear-gradient(135deg, #ffe0cc 0%, #ffab91 100%); color:#d84315; }
+    .pill-yellow { background: linear-gradient(135deg, #fff9c4 0%, #fff176 100%); color:#f9a825; }
+    .pill-lavender { background: linear-gradient(135deg, #e1d5f0 0%, #b39ddb 100%); color:#512da8; }
+    .pill-sky { background: linear-gradient(135deg, #d0f0fd 0%, #81d4fa 100%); color:#0277bd; }
+
+    .pill-small { width:52px; flex:none; }
+
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+    /* 오른쪽 상단 */
+    #topRight{
+      position:absolute; right:14px; top:18px;
+      width:40%;
+      display:flex; flex-direction:column; gap:10px;
+      align-items:flex-end;
+      pointer-events:auto;
+    }
+    #coins{
+      width:78%; height:42px;
+      background: linear-gradient(135deg, #fff9c4 0%, #ffe082 100%);
+      border:none; border-radius:20px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 14px; box-sizing:border-box;
+      font-weight:900; color:#e65100;
+      box-shadow: 0 3px 12px rgba(255,224,130,0.3);
+      font-size:14px;
+    }
+    #swatches{ display:flex; gap:10px; align-items:center; }
+    .swatchWrap{
+      text-align:center; font-size:11px; font-weight:700;
+      color:#888;
+      cursor:pointer;
+      transition: transform 0.2s ease;
+    }
+    .swatchWrap:active { transform: scale(0.92); }
+    .swatch{
+      width:46px; height:46px;
+      border:none; border-radius:16px;
+      margin:0 auto 4px auto;
+      box-sizing:border-box;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .swatch-event { background: linear-gradient(135deg, #fce4ec, #f8bbd0); }
+    .swatch-map { background: linear-gradient(135deg, #e0f2f1, #80cbc4); }
+    .swatch-gift { background: linear-gradient(135deg, #ede7f6, #b39ddb); }
+
+    /* 왼쪽 아이콘 */
+    #leftIcons{
+      position:absolute; left:14px; top:52%;
+      transform:translateY(-50%);
+      display:flex; flex-direction:column; gap:12px;
+      pointer-events:auto;
+    }
+    .circleIcon{
+      width:50px; height:50px;
+      border:none; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px;
+      user-select:none;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+      transition: all 0.2s ease;
+      cursor:pointer;
+    }
+    .circleIcon:active { transform: scale(0.9); }
+    .circle-home { background: linear-gradient(135deg, #e3f2fd, #90caf9); }
+    .circle-chat { background: linear-gradient(135deg, #f3e5f5, #ce93d8); }
+
+    /* 하단 네비 */
+    #bottomBar{
+      position:absolute; left:50%; bottom:20px;
+      transform:translateX(-50%);
+      width:88%; height:70px;
+      border:none; border-radius:35px;
+      display:flex; align-items:center; justify-content:space-around;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(14px);
+      box-sizing:border-box; padding:0 10px;
+      pointer-events:auto;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      border: 1px solid rgba(255,255,255,0.9);
+    }
+    .navItem{
+      width:52px; height:52px;
+      border:none; border-radius:50%;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:2px;
+      user-select:none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+      cursor:pointer;
+    }
+    .navItem:active { transform: scale(0.9); }
+    .navItem .nav-icon { font-size:18px; line-height:1; }
+    .navItem .nav-label { font-size:9px; font-weight:700; line-height:1; }
+
+    .nav-shop { background: linear-gradient(135deg, #fce4ec, #f48fb1); color:#c2185b; }
+    .nav-couple { background: linear-gradient(135deg, #fff3e0, #ffcc80); color:#e65100; }
+    .nav-green { background: linear-gradient(135deg, #e8f5e9, #a5d6a7); color:#2e7d32; }
+    .nav-search { background: linear-gradient(135deg, #e8eaf6, #9fa8da); color:#283593; }
+
+    /* 배경 선택 모드 */
+    #bgSelector {
+      position:absolute; inset:0; z-index:40;
+      display:none;
+      pointer-events:none;
+    }
+    #bgSelector .sel-btn {
+      pointer-events:auto;
+      border:none; border-radius:50%;
+      width:56px; height:56px;
+      font-size:26px; font-weight:900;
+      cursor:pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      color:#607d8b;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(8px);
+    }
+    #bgPrevBtn { position:absolute; left:14px; top:50%; transform:translateY(-50%); }
+    #bgNextBtn { position:absolute; right:14px; top:50%; transform:translateY(-50%); }
+    #bgConfirmBtn {
+      position:absolute; right:16px; bottom:18px;
+      pointer-events:auto;
+      border:none; border-radius:22px;
+      height:46px; padding:0 18px;
+      font-size:15px; font-weight:900;
+      cursor:pointer;
+      box-shadow: 0 4px 16px rgba(244,143,177,0.32);
+      color:#ad1457;
+      background: linear-gradient(135deg, #ffd6e8 0%, #ffb6c1 100%);
+      font-family:'Noto Sans KR', sans-serif;
+    }
+    #bgName {
+      position:absolute; top:20px; left:50%; transform:translateX(-50%);
+      pointer-events:none;
+      min-width:120px; text-align:center;
+      padding:8px 16px;
+      border-radius:18px;
+      font-size:14px; font-weight:900;
+      color:#455a64;
+      background: rgba(255,255,255,0.88);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      backdrop-filter: blur(8px);
+    }
+
+    /* 커플 선택 팝업 */
+    #coupleModal{
+      position:absolute; inset:0; z-index:55;
+      display:none;
+      background: rgba(24, 28, 42, 0.34);
+      backdrop-filter: blur(2px);
+      align-items:center; justify-content:center;
+    }
+    #coupleCard{
+      width:min(86%, 350px);
+      background: rgba(255,255,255,0.94);
+      border-radius:20px;
+      padding:14px;
+      box-sizing:border-box;
+      box-shadow: 0 10px 34px rgba(0,0,0,0.18);
+    }
+    #coupleHead{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    #coupleTitle{
+      margin:0; font-size:16px; font-weight:900; color:#455a64;
+    }
+    #coupleCloseBtn{
+      width:30px; height:30px; border:none; border-radius:50%;
+      cursor:pointer;
+      background:#edf0f6; color:#8d97a8; font-weight:900;
+    }
+    #coupleGrid{
+      display:grid; grid-template-columns:1fr 1fr; gap:8px;
+    }
+    .couple-item{
+      border:none; border-radius:14px;
+      background:#f8fbff;
+      padding:8px;
+      cursor:pointer;
+      box-shadow: inset 0 0 0 2px transparent;
+      font-family:'Noto Sans KR', sans-serif;
+    }
+    .couple-item.active{ box-shadow: inset 0 0 0 2px #90caf9; }
+    .couple-thumb{
+      width:100%; aspect-ratio:3/4; object-fit:contain;
+      border-radius:10px; background:#ffffff;
+    }
+    .couple-name{
+      margin-top:6px; font-size:13px; font-weight:800; color:#546e7a;
+    }
+    #coupleFooter{
+      margin-top:10px;
+      display:flex; justify-content:space-between; gap:8px;
+    }
+    #breakupBtn,#coupleConfirmBtn{
+      height:40px; border:none; border-radius:20px;
+      padding:0 14px; font-weight:900; cursor:pointer;
+      font-family:'Noto Sans KR', sans-serif;
+    }
+    #breakupBtn{
+      background:#eceff1; color:#607d8b;
+      display:none;
+    }
+    #coupleConfirmBtn{
+      margin-left:auto;
+      background: linear-gradient(135deg, #ffd6e8 0%, #ffb6c1 100%);
+      color:#ad1457;
+    }
+
+    /* 토끼TV 모달 */
+    #rabbitTvModal{
+      position:absolute; inset:0; z-index:58;
+      display:none;
+      background: rgba(15, 18, 28, 0.56);
+      align-items:center; justify-content:center;
+      backdrop-filter: blur(2px);
+    }
+    #rabbitTvCard{
+      width:min(90%, 420px);
+      background:#ffffff;
+      border-radius:18px;
+      box-shadow: 0 12px 34px rgba(0,0,0,0.25);
+      overflow:hidden;
+    }
+    #rabbitTvHead{
+      height:48px;
+      padding:0 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+      font-weight:900;
+      color:#6a1b9a;
+    }
+    #rabbitTvTitle{
+      margin:0;
+      font-size:14px;
+    }
+    #rabbitTvClose{
+      width:30px; height:30px;
+      border:none; border-radius:50%;
+      background:#ffffff;
+      color:#8e24aa;
+      font-size:18px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    #rabbitTvFrameWrap{
+      width:100%;
+      aspect-ratio:16/9;
+      background:#000;
+    }
+    #rabbitTvFrame{
+      width:100%;
+      height:100%;
+      border:0;
+      display:block;
+    }
+    #rabbitTvFooter{
+      padding:10px;
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      background:#faf7fd;
+    }
+    .rabbit-btn{
+      height:36px;
+      border:none;
+      border-radius:18px;
+      padding:0 12px;
+      font-weight:800;
+      cursor:pointer;
+      font-family:'Noto Sans KR', sans-serif;
+      font-size:13px;
+    }
+    #rabbitReloadBtn{
+      background: linear-gradient(135deg, #e8eaf6, #c5cae9);
+      color:#283593;
+    }
+    #rabbitOpenChannelBtn{
+      background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+      color:#ad1457;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="gameWrap">
+    <button class="btn-soft" id="backBtn">←</button>
+    <button class="btn-soft" id="broadcastBtn">📡 방송</button>
+    <button class="btn-soft" id="partyReplayBtn">💃 다시 춤추기</button>
+
+    <div id="mainUI">
+      <div id="leftPanel" class="clickable">
+        <div class="row">
+          <div class="pill pill-pink clickable" data-act="홈파티">🎉 홈파티</div>
+          <div class="pill pill-blue pill-small clickable" data-act="친구">👫</div>
+        </div>
+
+        <div class="pill pill-purple clickable" data-act="토끼TV" style="margin-bottom:8px;">🐰 토끼TV</div>
+        <div class="pill pill-mint clickable" data-act="전국" style="height:36px; font-size:12px; margin-bottom:8px;">🌏 전국</div>
+
+        <div class="grid2">
+          <div class="pill pill-peach clickable" data-act="이곳">📍 이곳</div>
+          <div class="pill pill-yellow clickable" data-act="게임">🎮 게임</div>
+        </div>
+      </div>
+
+      <div id="topRight">
+        <div id="coins" class="clickable" data-act="코인">
+          <span>🪙</span>
+          <span>아진코인</span>
+          <span id="coinValue" style="letter-spacing:1px;">0000</span>
+        </div>
+        <div id="swatches">
+          <div class="swatchWrap clickable" data-act="이벤트"><div class="swatch swatch-event">🎁</div>이벤트</div>
+          <div class="swatchWrap clickable" data-act="지도"><div class="swatch swatch-map">🗺️</div>지도</div>
+          <div class="swatchWrap clickable" data-act="주기"><div class="swatch swatch-gift">💝</div>주기</div>
+        </div>
+      </div>
+
+      <div id="leftIcons">
+        <div class="circleIcon circle-home clickable" data-act="홈">🏠</div>
+        <div class="circleIcon circle-chat clickable" data-act="톡">💬</div>
+      </div>
+
+      <div id="bottomBar" class="clickable">
+        <div class="navItem nav-shop clickable" data-act="쇼핑">
+          <span class="nav-icon">🛍️</span>
+          <span class="nav-label">쇼핑</span>
+        </div>
+        <div class="navItem nav-couple clickable" data-act="커플">
+          <span class="nav-icon">💑</span>
+          <span class="nav-label">커플</span>
+        </div>
+        <div class="navItem nav-green clickable" data-act="초록">
+          <span class="nav-icon">🌿</span>
+          <span class="nav-label">초록</span>
+        </div>
+        <div class="navItem nav-search clickable" data-act="탄검">
+          <span class="nav-icon">🔍</span>
+          <span class="nav-label">탄검</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="bgSelector">
+      <div id="bgName">배경</div>
+      <button id="bgPrevBtn" class="sel-btn" type="button">‹</button>
+      <button id="bgNextBtn" class="sel-btn" type="button">›</button>
+      <button id="bgConfirmBtn" type="button">확인</button>
+    </div>
+
+    <div id="coupleModal">
+      <div id="coupleCard">
+        <div id="coupleHead">
+          <h3 id="coupleTitle">친구 캐릭터 선택</h3>
+          <button id="coupleCloseBtn" type="button">×</button>
+        </div>
+        <div id="coupleGrid"></div>
+        <div id="coupleFooter">
+          <button id="breakupBtn" type="button">헤어지기</button>
+          <button id="coupleConfirmBtn" type="button">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="rabbitTvModal">
+      <div id="rabbitTvCard">
+        <div id="rabbitTvHead">
+          <h3 id="rabbitTvTitle">🐰 토끼TV</h3>
+          <button id="rabbitTvClose" type="button">×</button>
+        </div>
+        <div id="rabbitTvFrameWrap">
+          <iframe
+            id="rabbitTvFrame"
+            title="토끼TV 랜덤 영상"
+            src="about:blank"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        </div>
+        <div id="rabbitTvFooter">
+          <button id="rabbitReloadBtn" class="rabbit-btn" type="button">랜덤 다시</button>
+          <button id="rabbitOpenChannelBtn" class="rabbit-btn" type="button">채널 열기</button>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="game"></canvas>
+  </div>
+
+  <script>
+    const ASSETS = { girl: "girl.png", boy: "boy.png" };
+    const BG_ASSETS = [
+      { id: "forest", label: "숲", src: "backgrounds/forest.png", fallbackSrc: "backgrounds/forest.svg" },
+      { id: "sea", label: "바다", src: "backgrounds/sea.png", fallbackSrc: "backgrounds/sea.svg" },
+      { id: "valley", label: "계곡", src: "backgrounds/valley.png", fallbackSrc: "backgrounds/valley.svg" },
+      { id: "city", label: "도시", src: "backgrounds/city.png", fallbackSrc: "backgrounds/city.svg" },
+      { id: "mall", label: "쇼핑몰", src: "backgrounds/mall.png", fallbackSrc: "backgrounds/mall.svg" },
+    ];
+    const COUPLE_ASSETS = [
+      { id: "friend1", label: "루나", src: "friends/friend_1.png" },
+      { id: "friend2", label: "민트", src: "friends/friend_2.png" },
+      { id: "friend3", label: "하니", src: "friends/friend_3.png" },
+      { id: "friend4", label: "소다", src: "friends/friend_4.png" },
+    ];
+    const USER_NAME_KEY = "AHJIN_USER_NAME";
+    const RABBIT_TV_CHANNEL_URL = "https://www.youtube.com/@%EB%94%B8%EC%B4%88%EA%B5%AC%EB%A6%84";
+    const RABBIT_TV_LAST_VIDEO_KEY = "AHJIN_RABBIT_TV_LAST_VIDEO";
+    const RABBIT_TV_DEFAULT_VIDEO_ID = "dQw4w9WgXcQ";
+    const RABBIT_TV_VIDEO_IDS = [
+      "dQw4w9WgXcQ",
+      "9bZkp7q19f0",
+      "kJQP7kiw5Fk",
+      "fJ9rUzIMcZQ",
+      "YQHsXMglC9A",
+      "3JZ_D3ELwOQ",
+    ];
+
+    const params = new URLSearchParams(location.search);
+    const gender = (params.get("gender") === "boy") ? "boy" : "girl";
+    const userName = (params.get("name") || localStorage.getItem(USER_NAME_KEY) || "").trim();
+    if (userName) localStorage.setItem(USER_NAME_KEY, userName);
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const mainUI = document.getElementById("mainUI");
+    const broadcastBtn = document.getElementById("broadcastBtn");
+    const backBtn = document.getElementById("backBtn");
+    const bgSelector = document.getElementById("bgSelector");
+    const bgPrevBtn = document.getElementById("bgPrevBtn");
+    const bgNextBtn = document.getElementById("bgNextBtn");
+    const bgConfirmBtn = document.getElementById("bgConfirmBtn");
+    const bgNameEl = document.getElementById("bgName");
+    const coupleModal = document.getElementById("coupleModal");
+    const coupleGrid = document.getElementById("coupleGrid");
+    const coupleCloseBtn = document.getElementById("coupleCloseBtn");
+    const coupleConfirmBtn = document.getElementById("coupleConfirmBtn");
+    const breakupBtn = document.getElementById("breakupBtn");
+    const coinValueEl = document.getElementById("coinValue");
+    const rabbitTvModal = document.getElementById("rabbitTvModal");
+    const rabbitTvClose = document.getElementById("rabbitTvClose");
+    const rabbitTvFrame = document.getElementById("rabbitTvFrame");
+    const rabbitReloadBtn = document.getElementById("rabbitReloadBtn");
+    const rabbitOpenChannelBtn = document.getElementById("rabbitOpenChannelBtn");
+    const partyReplayBtn = document.getElementById("partyReplayBtn");
+    let images = {};
+    let backgroundImages = {};
+    let friendImages = {};
+    let partyBgImage = null;
+    const COIN_STORAGE_KEY = `AHJIN_COINS_V1:${userName || "guest"}`;
+    const BG_STORAGE_KEY = `AHJIN_BG_V1:${userName || "guest"}`;
+    const COUPLE_STORAGE_KEY = `AHJIN_COUPLE_V1:${userName || "guest"}`;
+    const DAILY_CHARGE = 7;
+    const GAME_COST = 1;
+    const COUPLE_PARTNER_SCALE = 0.78;
+    const COUPLE_PARTNER_LIFT_RATIO = 0.20;
+    let coinState = loadCoinState();
+    let currentBgIndex = loadBackgroundIndex();
+    let selectingBackground = false;
+    let draftBgIndex = currentBgIndex;
+    let selectedCoupleId = loadCoupleId();
+    let draftCoupleId = selectedCoupleId;
+    let shoppingAnim = null;
+    let shoppingRafId = 0;
+    let partyMode = false;
+    let partyDanceStart = 0;
+
+    function todayKey() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function parseDateKey(key) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(key || "")) return null;
+      const [y, m, d] = key.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function daysBetween(fromKey, toKey) {
+      const from = parseDateKey(fromKey);
+      const to = parseDateKey(toKey);
+      if (!from || !to) return 0;
+      const ms = to.getTime() - from.getTime();
+      return Math.max(0, Math.floor(ms / 86400000));
+    }
+
+    function loadCoinState() {
+      try {
+        const raw = localStorage.getItem(COIN_STORAGE_KEY);
+        if (!raw) {
+          return { balance: DAILY_CHARGE, lastChargeDate: todayKey() };
+        }
+        const parsed = JSON.parse(raw);
+        const balance = Number(parsed?.balance);
+        const lastChargeDate = String(parsed?.lastChargeDate || "");
+        if (!Number.isFinite(balance)) {
+          return { balance: DAILY_CHARGE, lastChargeDate: todayKey() };
+        }
+        return {
+          balance: Math.max(0, Math.floor(balance)),
+          lastChargeDate: parseDateKey(lastChargeDate) ? lastChargeDate : todayKey(),
+        };
+      } catch {
+        return { balance: DAILY_CHARGE, lastChargeDate: todayKey() };
+      }
+    }
+
+    function saveCoinState() {
+      localStorage.setItem(COIN_STORAGE_KEY, JSON.stringify(coinState));
+    }
+
+    function formatCoin(n) {
+      const v = Math.max(0, Math.floor(n));
+      if (v < 10000) return String(v).padStart(4, "0");
+      return String(v);
+    }
+
+    function refreshCoinUI() {
+      coinValueEl.textContent = formatCoin(coinState.balance);
+    }
+
+    function loadBackgroundIndex() {
+      const raw = Number(localStorage.getItem(BG_STORAGE_KEY));
+      if (!Number.isFinite(raw)) return 0;
+      const idx = Math.floor(raw);
+      if (idx < 0 || idx >= BG_ASSETS.length) return 0;
+      return idx;
+    }
+
+    function saveBackgroundIndex(idx) {
+      localStorage.setItem(BG_STORAGE_KEY, String(idx));
+    }
+
+    function loadCoupleId() {
+      const raw = String(localStorage.getItem(COUPLE_STORAGE_KEY) || "").trim();
+      if (!raw) return "";
+      return COUPLE_ASSETS.some((x)=>x.id === raw) ? raw : "";
+    }
+
+    function saveCoupleId(id) {
+      if (!id) {
+        localStorage.removeItem(COUPLE_STORAGE_KEY);
+      } else {
+        localStorage.setItem(COUPLE_STORAGE_KEY, id);
+      }
+    }
+
+    function activeBackgroundIndex() {
+      return selectingBackground ? draftBgIndex : currentBgIndex;
+    }
+
+    function updateBgName() {
+      bgNameEl.textContent = `배경: ${BG_ASSETS[activeBackgroundIndex()].label}`;
+    }
+
+    function enterBackgroundSelector() {
+      selectingBackground = true;
+      draftBgIndex = currentBgIndex;
+      mainUI.style.display = "none";
+      broadcastBtn.style.display = "none";
+      bgSelector.style.display = "block";
+      updateBgName();
+      draw();
+    }
+
+    function exitBackgroundSelector(apply) {
+      if (apply) {
+        currentBgIndex = draftBgIndex;
+        saveBackgroundIndex(currentBgIndex);
+      }
+      selectingBackground = false;
+      mainUI.style.display = "block";
+      broadcastBtn.style.display = "block";
+      bgSelector.style.display = "none";
+      draw();
+    }
+
+    function buildCoupleGrid() {
+      coupleGrid.innerHTML = "";
+      for (const item of COUPLE_ASSETS) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "couple-item";
+        if (draftCoupleId === item.id) btn.classList.add("active");
+        btn.dataset.id = item.id;
+        btn.innerHTML = `
+          <img class="couple-thumb" src="${item.src}" alt="${item.label}">
+          <div class="couple-name">${item.label}</div>
+        `;
+        coupleGrid.appendChild(btn);
+      }
+      breakupBtn.style.display = selectedCoupleId ? "inline-flex" : "none";
+    }
+
+    function openCoupleModal() {
+      draftCoupleId = selectedCoupleId;
+      buildCoupleGrid();
+      coupleModal.style.display = "flex";
+    }
+
+    function closeCoupleModal() {
+      coupleModal.style.display = "none";
+    }
+
+    function applyCoupleSelection() {
+      selectedCoupleId = draftCoupleId;
+      saveCoupleId(selectedCoupleId);
+      closeCoupleModal();
+      draw();
+    }
+
+    function applyDailyCharge() {
+      const today = todayKey();
+      const gap = daysBetween(coinState.lastChargeDate, today);
+      if (gap > 0) {
+        coinState.balance += gap * DAILY_CHARGE;
+        coinState.lastChargeDate = today;
+        saveCoinState();
+      }
+      refreshCoinUI();
+    }
+
+    function trySpendCoin(amount) {
+      if (coinState.balance < amount) return false;
+      coinState.balance -= amount;
+      saveCoinState();
+      refreshCoinUI();
+      return true;
+    }
+
+    function withCommonParams(path) {
+      const q = new URLSearchParams();
+      q.set("gender", gender);
+      if (userName) q.set("name", userName);
+      return `${path}?${q.toString()}`;
+    }
+
+    function embedUrlFromVideoId(videoId) {
+      const params = new URLSearchParams({
+        autoplay: "1",
+        rel: "0",
+        modestbranding: "1",
+        playsinline: "1",
+      });
+      if (/^https?:/i.test(location.origin || "")) {
+        params.set("origin", location.origin);
+      }
+      return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
+    }
+
+    function readLastRabbitVideoId() {
+      const id = String(localStorage.getItem(RABBIT_TV_LAST_VIDEO_KEY) || "").trim();
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : "";
+    }
+
+    function saveLastRabbitVideoId(videoId) {
+      if (/^[A-Za-z0-9_-]{11}$/.test(videoId || "")) {
+        localStorage.setItem(RABBIT_TV_LAST_VIDEO_KEY, videoId);
+      }
+    }
+
+    function playRabbitVideo(videoId) {
+      rabbitTvFrame.src = embedUrlFromVideoId(videoId);
+      saveLastRabbitVideoId(videoId);
+    }
+
+    function pickRandomRabbitVideoId() {
+      const ids = RABBIT_TV_VIDEO_IDS.filter((id) => /^[A-Za-z0-9_-]{11}$/.test(id));
+      if (ids.length === 0) return "";
+      return ids[Math.floor(Math.random() * ids.length)];
+    }
+
+    function loadRandomRabbitVideo() {
+      const videoId = pickRandomRabbitVideoId() || readLastRabbitVideoId() || RABBIT_TV_DEFAULT_VIDEO_ID;
+      playRabbitVideo(videoId);
+      return videoId;
+    }
+
+    function openRabbitTvModal() {
+      rabbitTvModal.style.display = "flex";
+      loadRandomRabbitVideo();
+    }
+
+    function closeRabbitTvModal() {
+      rabbitTvFrame.src = "about:blank";
+      rabbitTvModal.style.display = "none";
+    }
+
+    function needsAnimation() {
+      return !!shoppingAnim || partyMode;
+    }
+
+    function ensureAnimationLoop() {
+      if (!shoppingRafId && needsAnimation()) {
+        shoppingRafId = requestAnimationFrame(runAnimationFrame);
+      }
+    }
+
+    function enterPartyMode() {
+      partyMode = true;
+      partyDanceStart = performance.now();
+      shoppingAnim = null;
+      selectingBackground = false;
+      mainUI.style.display = "none";
+      broadcastBtn.style.display = "none";
+      bgSelector.style.display = "none";
+      coupleModal.style.display = "none";
+      closeRabbitTvModal();
+      partyReplayBtn.style.display = "block";
+      ensureAnimationLoop();
+      draw();
+    }
+
+    function exitPartyMode() {
+      partyMode = false;
+      partyReplayBtn.style.display = "none";
+      mainUI.style.display = "block";
+      broadcastBtn.style.display = "block";
+      draw();
+    }
+
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw();
+    }
+    window.addEventListener("resize", resize);
+
+    function loadImage(src){
+      return new Promise((res, rej)=>{
+        const img = new Image();
+        img.onload = ()=>res(img);
+        img.onerror = ()=>rej(new Error("이미지 로드 실패: " + src));
+        img.src = src;
+      });
+    }
+
+    function drawImageCover(img, dw, dh) {
+      const sw = img.width;
+      const sh = img.height;
+      if (!sw || !sh || !dw || !dh) return;
+      const scale = Math.max(dw / sw, dh / sh);
+      const cw = dw / scale;
+      const ch = dh / scale;
+      const sx = (sw - cw) / 2;
+      const sy = (sh - ch) / 2;
+      ctx.drawImage(img, sx, sy, cw, ch, 0, 0, dw, dh);
+    }
+
+    function pathRoundedRect(x, y, w, h, r) {
+      const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    function drawShoppingBag(x, y, size, fill, stroke, textColor, label, tiltDeg) {
+      const w = size;
+      const h = size * 1.1;
+      const tilt = (tiltDeg * Math.PI) / 180;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(tilt);
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2.4;
+      pathRoundedRect(-w / 2, -h / 2, w, h, 7);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.22, -h * 0.45);
+      ctx.quadraticCurveTo(-w * 0.22, -h * 0.66, 0, -h * 0.66);
+      ctx.quadraticCurveTo(w * 0.22, -h * 0.66, w * 0.22, -h * 0.45);
+      ctx.stroke();
+
+      ctx.fillStyle = textColor;
+      ctx.font = `700 ${Math.max(10, Math.round(size * 0.22))}px 'Noto Sans KR', sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, 0, h * 0.03);
+      ctx.restore();
+    }
+
+    function draw(now = performance.now()){
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);
+
+      const bg = partyMode
+        ? partyBgImage
+        : backgroundImages[BG_ASSETS[activeBackgroundIndex()].id];
+      if (bg) {
+        drawImageCover(bg, w, h);
+      }
+
+      if (selectingBackground) {
+        return;
+      }
+
+      if (partyMode) {
+        const t = (now - partyDanceStart) * 0.001;
+        const mainImg = images[gender];
+        if (!mainImg) return;
+        const rainbowHueA = (t * 90) % 360;
+        const rainbowHueB = (rainbowHueA + 120) % 360;
+        const rainbowHueC = (rainbowHueA + 240) % 360;
+
+        ctx.save();
+        const skyFx = ctx.createLinearGradient(0, 0, w, h);
+        skyFx.addColorStop(0, `hsla(${rainbowHueA}, 95%, 62%, 0.30)`);
+        skyFx.addColorStop(0.5, `hsla(${rainbowHueB}, 95%, 60%, 0.22)`);
+        skyFx.addColorStop(1, `hsla(${rainbowHueC}, 95%, 64%, 0.30)`);
+        ctx.fillStyle = skyFx;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+
+        const dancers = [
+          { id: "main", img: mainImg, xRatio: 0.50, yRatio: 0.76, hRatio: 0.42, phase: 0, mirror: false },
+          { id: "friend1", img: friendImages.friend1, xRatio: 0.20, yRatio: 0.79, hRatio: 0.30, phase: 0.8, mirror: false },
+          { id: "friend2", img: friendImages.friend2, xRatio: 0.34, yRatio: 0.80, hRatio: 0.32, phase: 1.7, mirror: true },
+          { id: "friend3", img: friendImages.friend3, xRatio: 0.66, yRatio: 0.80, hRatio: 0.32, phase: 2.4, mirror: false },
+          { id: "friend4", img: friendImages.friend4, xRatio: 0.80, yRatio: 0.79, hRatio: 0.30, phase: 3.1, mirror: true },
+        ];
+
+        for (const d of dancers) {
+          if (!d.img) continue;
+          const baseH = h * d.hRatio;
+          const scale = baseH / d.img.height;
+          const dw = d.img.width * scale;
+          const dh = d.img.height * scale;
+          const bob = Math.sin((t * 6) + d.phase) * 12;
+          const sway = Math.sin((t * 4) + d.phase) * 10;
+          const tilt = Math.sin((t * 6) + d.phase) * 0.08;
+          const x = (w * d.xRatio) - (dw / 2) + sway;
+          const y = (h * d.yRatio) - dh + bob;
+
+          ctx.save();
+          ctx.translate(x + dw / 2, y + dh * 0.55);
+          ctx.rotate(tilt);
+          if (d.mirror) ctx.scale(-1, 1);
+          ctx.drawImage(d.img, -dw / 2, -dh * 0.55, dw, dh);
+          ctx.restore();
+        }
+
+        const pulse = 0.65 + Math.sin(t * 8) * 0.18;
+        ctx.fillStyle = `rgba(255, 248, 175, ${Math.max(0.2, pulse)})`;
+        ctx.beginPath();
+        ctx.ellipse(w * 0.5, h * 0.11, 58, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const flashCore = Math.max(0, Math.sin(t * 15.5));
+        const flash = Math.pow(flashCore, 7);
+        if (flash > 0.02) {
+          ctx.save();
+          ctx.fillStyle = `rgba(255,255,255,${0.08 + (flash * 0.18)})`;
+          ctx.fillRect(0, 0, w, h);
+          ctx.restore();
+        }
+
+        ctx.save();
+        const floorFx = ctx.createRadialGradient(
+          w * 0.5, h * 0.82, 20,
+          w * 0.5, h * 0.82, w * 0.55
+        );
+        floorFx.addColorStop(0, `hsla(${(rainbowHueA + 40) % 360}, 100%, 70%, 0.28)`);
+        floorFx.addColorStop(0.5, `hsla(${(rainbowHueB + 20) % 360}, 100%, 65%, 0.18)`);
+        floorFx.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = floorFx;
+        ctx.fillRect(0, h * 0.55, w, h * 0.45);
+        ctx.restore();
+        return;
+      }
+
+      const img = images[gender];
+      if(!img) return;
+
+      const hasCouple = !!selectedCoupleId && !!friendImages[selectedCoupleId];
+      const targetH = h * (hasCouple ? 0.56 : 0.62);
+      const scale = targetH / img.height;
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+      const bottomReserved = 90;
+      const y = h - dh - bottomReserved;
+      const isShopping = !!shoppingAnim;
+
+      if (isShopping) {
+        const elapsed = now - shoppingAnim.start;
+        const progress = Math.min(1, elapsed / shoppingAnim.duration);
+        const walkPhase = elapsed * 0.018;
+        const bob = Math.sin(walkPhase * 2) * 6;
+        const travel = Math.sin(progress * Math.PI) * (w * 0.22);
+        const bagSwing = Math.sin(walkPhase) * 8;
+        const x = (w - dw) / 2 - (w * 0.11) + travel;
+
+        if (hasCouple) {
+          const partnerImg = friendImages[selectedCoupleId];
+          const partnerTargetH = targetH * COUPLE_PARTNER_SCALE;
+          const pScale = partnerTargetH / partnerImg.height;
+          const pdw = partnerImg.width * pScale;
+          const pdh = partnerImg.height * pScale;
+          const lift = pdh * COUPLE_PARTNER_LIFT_RATIO;
+          const py = y + (dh - pdh) - lift;
+          const px = w - pdw - 28;
+          ctx.drawImage(partnerImg, px, py, pdw, pdh);
+        }
+
+        ctx.drawImage(img, x, y + bob, dw, dh);
+
+        const leftBagX = x + dw * 0.24;
+        const rightBagX = x + dw * 0.79;
+        const bagY = y + dh * 0.72 + bob;
+        drawShoppingBag(leftBagX, bagY + 10, Math.max(26, dw * 0.13), "#ffefab", "#5c4b3b", "#5c4b3b", "SHOP", -12 - bagSwing);
+        drawShoppingBag(rightBagX, bagY + 8, Math.max(30, dw * 0.15), "#f7f9ff", "#40506a", "#40506a", "HAPPY", 10 + bagSwing);
+
+        if (progress >= 1) {
+          shoppingAnim = null;
+        }
+        return;
+      }
+
+      if (!hasCouple) {
+        const x = (w - dw) / 2;
+        ctx.drawImage(img, x, y, dw, dh);
+        return;
+      }
+
+      const partnerImg = friendImages[selectedCoupleId];
+      const partnerTargetH = targetH * COUPLE_PARTNER_SCALE;
+      const pScale = partnerTargetH / partnerImg.height;
+      const pdw = partnerImg.width * pScale;
+      const pdh = partnerImg.height * pScale;
+      const lift = pdh * COUPLE_PARTNER_LIFT_RATIO;
+      const py = y + (dh - pdh) - lift; // 발 라인이 맞도록 상향 보정
+      const gap = Math.min(28, w * 0.04);
+      const totalW = dw + gap + pdw;
+      const startX = (w - totalW) / 2;
+
+      ctx.save();
+      ctx.translate(startX + dw, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, y, dw, dh);
+      ctx.restore();
+      ctx.drawImage(partnerImg, startX + dw + gap, py, pdw, pdh);
+    }
+
+    function runAnimationFrame(now) {
+      draw(now);
+      if (!needsAnimation()) {
+        shoppingRafId = 0;
+        draw();
+        return;
+      }
+      shoppingRafId = requestAnimationFrame(runAnimationFrame);
+    }
+
+    function startShoppingAnimation() {
+      shoppingAnim = { start: performance.now(), duration: 4200 };
+      ensureAnimationLoop();
+    }
+
+    broadcastBtn.onclick = ()=> {
+      location.href = withCommonParams("broadcast.html");
+    };
+    backBtn.onclick = ()=> {
+      if (partyMode) {
+        exitPartyMode();
+        return;
+      }
+      if (selectingBackground) {
+        exitBackgroundSelector(false);
+        return;
+      }
+      location.href = withCommonParams("index.html");
+    };
+
+    mainUI.addEventListener("click", (e)=>{
+      const el = e.target.closest("[data-act]");
+      if(!el) return;
+      if (el.dataset.act === "코인") {
+        alert(`보유 코인: ${formatCoin(coinState.balance)}`);
+        return;
+      }
+      if (el.dataset.act === "이곳") {
+        enterBackgroundSelector();
+        return;
+      }
+      if (el.dataset.act === "커플") {
+        openCoupleModal();
+        return;
+      }
+      if (el.dataset.act === "홈파티") {
+        enterPartyMode();
+        return;
+      }
+      if (el.dataset.act === "토끼TV") {
+        openRabbitTvModal();
+        return;
+      }
+      if (el.dataset.act === "쇼핑") {
+        startShoppingAnimation();
+        return;
+      }
+      if (el.dataset.act === "게임") {
+        if (!trySpendCoin(GAME_COST)) {
+          alert("코인이 부족해! (게임 1회: 1코인)");
+          return;
+        }
+        location.href = withCommonParams("chess.html");
+        return;
+      }
+      alert("클릭: " + el.dataset.act);
+    });
+
+    bgPrevBtn.onclick = ()=> {
+      draftBgIndex = (draftBgIndex - 1 + BG_ASSETS.length) % BG_ASSETS.length;
+      updateBgName();
+      draw();
+    };
+    bgNextBtn.onclick = ()=> {
+      draftBgIndex = (draftBgIndex + 1) % BG_ASSETS.length;
+      updateBgName();
+      draw();
+    };
+    bgConfirmBtn.onclick = ()=> {
+      exitBackgroundSelector(true);
+    };
+
+    coupleGrid.addEventListener("click", (e)=>{
+      const target = e.target.closest(".couple-item");
+      if (!target) return;
+      draftCoupleId = target.dataset.id || "";
+      buildCoupleGrid();
+    });
+    coupleCloseBtn.onclick = closeCoupleModal;
+    coupleModal.addEventListener("click", (e)=>{
+      if (e.target === coupleModal) closeCoupleModal();
+    });
+    breakupBtn.onclick = ()=> {
+      draftCoupleId = "";
+      applyCoupleSelection();
+    };
+    coupleConfirmBtn.onclick = ()=> {
+      if (!draftCoupleId) {
+        alert("친구 캐릭터를 선택해줘!");
+        return;
+      }
+      applyCoupleSelection();
+    };
+    rabbitTvClose.onclick = closeRabbitTvModal;
+    rabbitTvModal.addEventListener("click", (e)=>{
+      if (e.target === rabbitTvModal) closeRabbitTvModal();
+    });
+    rabbitReloadBtn.onclick = ()=> {
+      loadRandomRabbitVideo();
+    };
+    rabbitOpenChannelBtn.onclick = ()=> {
+      window.open(RABBIT_TV_CHANNEL_URL, "_blank", "noopener");
+    };
+    partyReplayBtn.onclick = ()=> {
+      if (!partyMode) return;
+      partyDanceStart = performance.now();
+      ensureAnimationLoop();
+      draw();
+    };
+
+    (async function init(){
+      applyDailyCharge();
+      saveCoinState();
+      images.girl = await loadImage(ASSETS.girl);
+      images.boy  = await loadImage(ASSETS.boy);
+      const loadedBackgrounds = await Promise.all(
+        BG_ASSETS.map(async (bg)=> {
+          try {
+            return [bg.id, await loadImage(bg.src)];
+          } catch (err) {
+            if (bg.fallbackSrc) {
+              return [bg.id, await loadImage(bg.fallbackSrc)];
+            }
+            throw err;
+          }
+        })
+      );
+      backgroundImages = Object.fromEntries(loadedBackgrounds);
+      try {
+        partyBgImage = await loadImage("backgrounds/party.png");
+      } catch (err) {
+        console.warn("party background load failed:", err);
+        partyBgImage = null;
+      }
+      const loadedFriends = await Promise.all(
+        COUPLE_ASSETS.map(async (c)=> [c.id, await loadImage(c.src)])
+      );
+      friendImages = Object.fromEntries(loadedFriends);
+      resize();
+    })().catch(err=>{
+      console.error(err);
+      alert(err.message);
+    });
+  </script>
+</body>
+</html>
