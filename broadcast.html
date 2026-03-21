@@ -162,6 +162,18 @@
       background: rgba(255,255,255,0.4);
       backdrop-filter: blur(10px);
     }
+    #personaSelect {
+      width:112px;
+      border:none;
+      border-radius:16px;
+      background: rgba(255,255,255,0.92);
+      padding:0 10px;
+      font-size:12px;
+      font-family: 'Noto Sans KR', sans-serif;
+      color:#666;
+      outline:none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
     #chatInput input {
       flex:1; padding:10px 16px;
       border:none; border-radius:22px;
@@ -227,6 +239,7 @@
         </div>
       </div>
       <div id="chatInput">
+        <select id="personaSelect" title="페르소나 선택"></select>
         <input type="text" id="msgInput" placeholder="메시지를 입력하세요..." autocomplete="off" />
         <button id="sendBtn">➤</button>
       </div>
@@ -303,8 +316,14 @@
     const msgInput = document.getElementById("msgInput");
     const sendBtn = document.getElementById("sendBtn");
 
-    const BOT_NAME = "토끼봇";
+    const BOT_NAME = "방송봇";
     const BOT_ICON = "🐰";
+    const sessionId = (userName ? `ahjin:${userName}` : `ahjin:guest:${Math.random().toString(36).slice(2,8)}`);
+    const apiBase = (params.get("api") || "").replace(/\/$/, "");
+    const chatEndpoint = apiBase ? `${apiBase}/api/chat` : `${location.origin}/api/chat`;
+    const personasEndpoint = apiBase ? `${apiBase}/api/personas` : `${location.origin}/api/personas`;
+    const personaSelect = document.getElementById("personaSelect");
+    const PERSONA_STORAGE_KEY = `AHJIN_PERSONA_V1:${userName || "guest"}`;
 
     // 패턴 매칭 응답
     const PATTERNS = [
@@ -349,7 +368,54 @@
       return FALLBACKS[Math.floor(Math.random() * FALLBACKS.length)];
     }
 
-    function sendMessage() {
+    function getSelectedPersona() {
+      return (personaSelect?.value || localStorage.getItem(PERSONA_STORAGE_KEY) || "luna").trim() || "luna";
+    }
+
+    async function loadPersonas() {
+      const fallback = [
+        { id: "luna", label: "루나" },
+        { id: "ahjin", label: "토끼봇" },
+        { id: "coach", label: "코치" },
+      ];
+      try {
+        const res = await fetch(personasEndpoint);
+        if (!res.ok) throw new Error(`personas_http_${res.status}`);
+        const data = await res.json();
+        const list = Array.isArray(data?.personas) && data.personas.length ? data.personas : fallback;
+        const preferred = localStorage.getItem(PERSONA_STORAGE_KEY) || data?.defaultPersona || "luna";
+        personaSelect.innerHTML = "";
+        for (const p of list) {
+          const opt = document.createElement("option");
+          opt.value = String(p.id || "").trim();
+          opt.textContent = String(p.label || p.id || "persona");
+          personaSelect.appendChild(opt);
+        }
+        personaSelect.value = list.some((p)=>p.id===preferred) ? preferred : list[0].id;
+      } catch {
+        personaSelect.innerHTML = fallback.map((p)=>`<option value="${p.id}">${p.label}</option>`).join("");
+        personaSelect.value = localStorage.getItem(PERSONA_STORAGE_KEY) || "luna";
+      }
+    }
+
+    async function requestServerReply(text) {
+      const payload = {
+        message: text,
+        lang: "ko",
+        sessionId,
+        persona: getSelectedPersona(),
+      };
+      const res = await fetch(chatEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `chat_http_${res.status}`);
+      return data;
+    }
+
+    async function sendMessage() {
       const text = msgInput.value.trim();
       if (!text) return;
 
@@ -358,12 +424,18 @@
       showTyping();
       sendBtn.disabled = true;
 
-      window.setTimeout(() => {
+      try {
+        const result = await requestServerReply(text);
         removeTyping();
+        addBotMessage(result?.reply || getBotReply(text));
+      } catch (err) {
+        removeTyping();
+        addSystemMessage("서버 연결 실패 → 오프라인 응답으로 전환");
         addBotMessage(getBotReply(text));
+      } finally {
         sendBtn.disabled = false;
         msgInput.focus();
-      }, 320);
+      }
     }
 
     // ── UI 헬퍼 ──
@@ -415,6 +487,10 @@
     }
 
     sendBtn.onclick = sendMessage;
+    personaSelect.addEventListener("change", ()=> {
+      localStorage.setItem(PERSONA_STORAGE_KEY, getSelectedPersona());
+      addSystemMessage(`페르소나 변경: ${personaSelect.options[personaSelect.selectedIndex]?.textContent || getSelectedPersona()}`);
+    });
     msgInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.isComposing) {
         e.preventDefault();
@@ -426,8 +502,10 @@
     (async function init(){
       images.girl = await loadImage(ASSETS.girl);
       images.boy  = await loadImage(ASSETS.boy);
+      await loadPersonas();
+      localStorage.setItem(PERSONA_STORAGE_KEY, getSelectedPersona());
       resize();
-      addSystemMessage("토끼봇 채팅 준비 완료 (오프라인 모드)");
+      addSystemMessage(`채팅 준비 완료 · 페르소나: ${personaSelect.options[personaSelect.selectedIndex]?.textContent || getSelectedPersona()}`);
     })().catch(console.error);
   </script>
 </body>

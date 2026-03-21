@@ -21,6 +21,7 @@ const GEMINI_API_BASE_URL =
   process.env.GEMINI_API_BASE_URL || "https://generativelanguage.googleapis.com";
 const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 12000);
 const SESSION_MAX_TURNS = Number(process.env.SESSION_MAX_TURNS || 8);
+const DEFAULT_PERSONA = String(process.env.DEFAULT_PERSONA || "ahjin").trim() || "ahjin";
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "*")
   .split(",")
   .map((s) => s.trim())
@@ -43,6 +44,41 @@ const MIME = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
 };
+
+const PERSONA_PRESETS = {
+  ahjin: {
+    label: "토끼봇 (기본)",
+    ko: "너는 아진이 게임 방송 채팅 도우미 '토끼봇'이다. 밝고 귀엽고 친근하게 답해. 답변은 1~3문장으로 짧게. 모르면 솔직히 모른다고 말해.",
+    en: "You are Tokkibot for Ahjin Game livestream chat. Friendly, upbeat, concise (1-3 short sentences), and honest when unsure.",
+  },
+  luna: {
+    label: "루나 (새 페르소나)",
+    ko: "너는 아진이 게임 전용 페르소나 '루나'다. 말투는 차분하고 다정한 언니 느낌. 짧지만 센스 있게 답하고, 응원·공감·가벼운 유머를 섞어라. 과장이나 사실 단정은 피하라.",
+    en: "You are 'Luna', a calm and warm persona for Ahjin Game chat. Keep replies concise, empathetic, lightly witty, and avoid confident claims without basis.",
+  },
+  coach: {
+    label: "코치", 
+    ko: "너는 게임 채팅 코치다. 핵심만 빠르게 알려주고 실용적인 다음 행동 1개를 제안해. 군더더기 없이 1~2문장으로 답해.",
+    en: "You are a practical game chat coach. Give concise, actionable advice with one clear next step in 1-2 sentences.",
+  },
+};
+
+function normalizePersona(input) {
+  const key = String(input || "").trim().toLowerCase();
+  if (key && PERSONA_PRESETS[key]) return key;
+  if (PERSONA_PRESETS[DEFAULT_PERSONA]) return DEFAULT_PERSONA;
+  return "ahjin";
+}
+
+function getSystemInstruction({ lang, persona }) {
+  const key = normalizePersona(persona);
+  const preset = PERSONA_PRESETS[key] || PERSONA_PRESETS.ahjin;
+  return lang === "ko" ? preset.ko : preset.en;
+}
+
+function listPersonas() {
+  return Object.entries(PERSONA_PRESETS).map(([id, v]) => ({ id, label: v.label }));
+}
 
 function loadDotEnv(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -278,7 +314,7 @@ function saveSessionTurn(sessionId, userText, botText) {
   chatSessions.set(sessionId, history);
 }
 
-async function requestGeminiReply({ message, history, lang }) {
+async function requestGeminiReply({ message, history, lang, persona }) {
   if (!GEMINI_API_KEY) {
     return { ok: false, statusCode: 500, error: "GEMINI_API_KEY is missing" };
   }
@@ -298,10 +334,7 @@ async function requestGeminiReply({ message, history, lang }) {
   }
   contents.push({ role: "user", parts: [{ text: message }] });
 
-  const systemInstruction =
-    lang === "ko"
-      ? "너는 한국어 방송 채팅 도우미 토끼봇이다. 짧고 자연스럽고 친근하게 답해. 근거 없는 사실 단정은 피하고 모르면 솔직히 말해."
-      : "You are Tokkibot, a friendly livestream chat assistant. Be concise, natural, and avoid fabricating facts.";
+  const systemInstruction = getSystemInstruction({ lang, persona });
 
   try {
     const upstreamRes = await fetch(endpoint, {
@@ -365,7 +398,7 @@ async function requestGeminiReply({ message, history, lang }) {
   }
 }
 
-async function requestXaiReply({ message, history, lang }) {
+async function requestXaiReply({ message, history, lang, persona }) {
   if (!XAI_API_KEY) {
     return { ok: false, statusCode: 500, error: "XAI_API_KEY is missing" };
   }
@@ -377,10 +410,7 @@ async function requestXaiReply({ message, history, lang }) {
   const messages = [
     {
       role: "system",
-      content:
-        lang === "ko"
-          ? "너는 한국어 방송 채팅 도우미 토끼봇이다. 짧고 자연스럽고 친근하게 답해. 사실 확인이 어려우면 모른다고 말해."
-          : "You are Tokkibot, a friendly livestream chat assistant. Be concise and avoid fabrications.",
+      content: getSystemInstruction({ lang, persona }),
     },
   ];
   for (const turn of history || []) {
@@ -462,6 +492,7 @@ async function handleApiChat(req, res) {
     const lang = String(body?.lang || "ko").trim();
     const talkKey = body?.talkKey ? String(body.talkKey).trim() : "";
     const sessionId = body?.sessionId ? String(body.sessionId).trim() : "";
+    const persona = normalizePersona(body?.persona);
 
     if (!message) {
       return sendJson(res, 400, { error: "message is required" });
@@ -470,26 +501,28 @@ async function handleApiChat(req, res) {
     let result = null;
     if (XAI_API_KEY) {
       const history = getSessionHistory(sessionId);
-      result = await requestXaiReply({ message, history, lang });
+      result = await requestXaiReply({ message, history, lang, persona });
       if (result.ok) {
         saveSessionTurn(sessionId, message, result.reply);
         return sendJson(res, 200, {
           reply: result.reply,
           provider: result.provider,
           talkKey: null,
+          persona,
         });
       }
     }
 
     if (GEMINI_API_KEY) {
       const history = getSessionHistory(sessionId);
-      result = await requestGeminiReply({ message, history, lang });
+      result = await requestGeminiReply({ message, history, lang, persona });
       if (result.ok) {
         saveSessionTurn(sessionId, message, result.reply);
         return sendJson(res, 200, {
           reply: result.reply,
           provider: result.provider,
           talkKey: null,
+          persona,
         });
       }
     }
@@ -506,6 +539,7 @@ async function handleApiChat(req, res) {
       reply: result.reply,
       talkKey: result.talkKey,
       provider: "simsimi",
+      persona,
     });
   } catch (err) {
     return sendJson(res, 500, {
@@ -567,6 +601,13 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && req.url.startsWith("/api/personas")) {
+    return sendJson(res, 200, {
+      defaultPersona: normalizePersona(DEFAULT_PERSONA),
+      personas: listPersonas(),
+    });
+  }
+
   if (req.method !== "GET" && req.method !== "HEAD") {
     sendJson(res, 405, { error: "method_not_allowed" });
     return;
@@ -607,4 +648,5 @@ server.listen(PORT, () => {
   console.log(`[server] SIMSIMI_API_KEY: ${keyStatus}`);
   console.log(`[server] XAI_API_KEY: ${xaiStatus}`);
   console.log(`[server] GEMINI_API_KEY: ${llmStatus}`);
+  console.log(`[server] DEFAULT_PERSONA: ${normalizePersona(DEFAULT_PERSONA)}`);
 });
