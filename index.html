@@ -226,6 +226,7 @@
     const ASSETS = { girl: "girl.png", boy: "boy.png" };
     const USER_NAME_KEY = "AHJIN_USER_NAME";
     const USER_NAMES_KEY = "AHJIN_USER_NAMES_V1";
+    const BGM_ENABLED_KEY = "AHJIN_BGM_ENABLED_V1";
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     const startModal = document.getElementById("startModal");
@@ -393,6 +394,7 @@
       }
       userName = inputName;
       localStorage.setItem(USER_NAME_KEY, userName);
+      localStorage.setItem(BGM_ENABLED_KEY, "1");
       registerUserName(userName);
       refreshSavedNames();
       goMainWithName(userName);
@@ -406,6 +408,7 @@
       }
       userName = picked;
       localStorage.setItem(USER_NAME_KEY, userName);
+      localStorage.setItem(BGM_ENABLED_KEY, "1");
       goMainWithName(userName);
     };
 

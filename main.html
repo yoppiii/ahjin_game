@@ -132,6 +132,16 @@
       box-shadow: 0 3px 12px rgba(255,224,130,0.3);
       font-size:14px;
     }
+    #affectionBox{
+      width:78%; height:40px;
+      background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
+      border:none; border-radius:20px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 14px; box-sizing:border-box;
+      font-weight:900; color:#ad1457;
+      box-shadow: 0 3px 12px rgba(248,187,208,0.35);
+      font-size:13px;
+    }
     #swatches{ display:flex; gap:10px; align-items:center; }
     .swatchWrap{
       text-align:center; font-size:11px; font-weight:700;
@@ -390,11 +400,64 @@
       background: linear-gradient(135deg, #fce4ec, #f8bbd0);
       color:#ad1457;
     }
+
+    #infoModal{
+      position:absolute; inset:0; z-index:59;
+      display:none;
+      background: rgba(24, 28, 42, 0.34);
+      backdrop-filter: blur(2px);
+      align-items:center; justify-content:center;
+    }
+    #infoCard{
+      width:min(88%, 360px);
+      background: rgba(255,255,255,0.95);
+      border-radius:20px;
+      box-shadow: 0 10px 34px rgba(0,0,0,0.18);
+      padding:16px;
+      box-sizing:border-box;
+    }
+    #infoHead{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    #infoTitle{
+      margin:0; font-size:17px; font-weight:900; color:#455a64;
+    }
+    #infoCloseBtn{
+      width:30px; height:30px; border:none; border-radius:50%;
+      cursor:pointer;
+      background:#edf0f6; color:#8d97a8; font-weight:900;
+    }
+    #infoBody{
+      color:#546e7a;
+      font-size:14px;
+      line-height:1.6;
+      white-space:pre-line;
+    }
+    #infoActions{
+      margin-top:14px;
+      display:flex; justify-content:flex-end; gap:8px;
+      flex-wrap:wrap;
+    }
+    .info-action{
+      height:40px; border:none; border-radius:20px;
+      padding:0 14px; font-weight:900; cursor:pointer;
+      font-family:'Noto Sans KR', sans-serif;
+      font-size:13px;
+    }
+    .info-action.primary{
+      background: linear-gradient(135deg, #ffd6e8 0%, #ffb6c1 100%);
+      color:#ad1457;
+    }
+    .info-action.secondary{
+      background:#eceff1; color:#607d8b;
+    }
   </style>
 </head>
 
 <body>
   <div id="gameWrap">
+    <audio id="bgmPlayer" src="꼬리가_살랑살랑.mp3" loop preload="auto"></audio>
     <button class="btn-soft" id="backBtn">←</button>
     <button class="btn-soft" id="broadcastBtn">📡 방송</button>
     <button class="btn-soft" id="partyReplayBtn">💃 다시 춤추기</button>
@@ -420,6 +483,11 @@
           <span>🪙</span>
           <span>아진코인</span>
           <span id="coinValue" style="letter-spacing:1px;">0000</span>
+        </div>
+        <div id="affectionBox" class="clickable" data-act="호감도">
+          <span>💞</span>
+          <span>친밀도</span>
+          <span id="affectionValue" style="letter-spacing:1px;">000</span>
         </div>
         <div id="swatches">
           <div class="swatchWrap clickable" data-act="이벤트"><div class="swatch swatch-event">🎁</div>이벤트</div>
@@ -497,6 +565,17 @@
       </div>
     </div>
 
+    <div id="infoModal">
+      <div id="infoCard">
+        <div id="infoHead">
+          <h3 id="infoTitle">알림</h3>
+          <button id="infoCloseBtn" type="button">×</button>
+        </div>
+        <div id="infoBody"></div>
+        <div id="infoActions"></div>
+      </div>
+    </div>
+
     <canvas id="game"></canvas>
   </div>
 
@@ -516,6 +595,7 @@
       { id: "friend4", label: "소다", src: "friends/friend_4.png" },
     ];
     const USER_NAME_KEY = "AHJIN_USER_NAME";
+    const BGM_ENABLED_KEY = "AHJIN_BGM_ENABLED_V1";
     const RABBIT_TV_CHANNEL_URL = "https://www.youtube.com/@%EB%94%B8%EC%B4%88%EA%B5%AC%EB%A6%84";
     const RABBIT_TV_LAST_VIDEO_KEY = "AHJIN_RABBIT_TV_LAST_VIDEO";
     const RABBIT_TV_DEFAULT_VIDEO_ID = "dQw4w9WgXcQ";
@@ -553,6 +633,13 @@
     const rabbitReloadBtn = document.getElementById("rabbitReloadBtn");
     const rabbitOpenChannelBtn = document.getElementById("rabbitOpenChannelBtn");
     const partyReplayBtn = document.getElementById("partyReplayBtn");
+    const bgmPlayer = document.getElementById("bgmPlayer");
+    const affectionValueEl = document.getElementById("affectionValue");
+    const infoModal = document.getElementById("infoModal");
+    const infoTitle = document.getElementById("infoTitle");
+    const infoBody = document.getElementById("infoBody");
+    const infoActions = document.getElementById("infoActions");
+    const infoCloseBtn = document.getElementById("infoCloseBtn");
     let images = {};
     let backgroundImages = {};
     let friendImages = {};
@@ -560,8 +647,13 @@
     const COIN_STORAGE_KEY = `AHJIN_COINS_V1:${userName || "guest"}`;
     const BG_STORAGE_KEY = `AHJIN_BG_V1:${userName || "guest"}`;
     const COUPLE_STORAGE_KEY = `AHJIN_COUPLE_V1:${userName || "guest"}`;
+    const AFFECTION_STORAGE_KEY = `AHJIN_AFFECTION_V1:${userName || "guest"}`;
+    const EVENT_STORAGE_KEY = `AHJIN_EVENT_V1:${userName || "guest"}`;
     const DAILY_CHARGE = 7;
     const GAME_COST = 1;
+    const GIFT_COST = 2;
+    const GIFT_AFFECTION_GAIN = 5;
+    const EVENT_REWARD = 3;
     const COUPLE_PARTNER_SCALE = 0.78;
     const COUPLE_PARTNER_LIFT_RATIO = 0.20;
     let coinState = loadCoinState();
@@ -574,6 +666,16 @@
     let shoppingRafId = 0;
     let partyMode = false;
     let partyDanceStart = 0;
+    let affectionState = loadAffectionState();
+    let eventState = loadEventState();
+
+    const LOCAL_SPOTS = {
+      forest: "숲 속 산책길이 열려 있어. 오늘은 바람이 좋아서 천천히 걷기 딱 좋아.",
+      sea: "바다 쪽 파도 소리가 들려. 조개를 줍거나 사진을 찍기 좋은 날이야.",
+      valley: "계곡 물소리가 시원해. 발 담그고 쉬면 기분이 금방 좋아질 것 같아.",
+      city: "도시 광장이 반짝이고 있어. 카페나 공연 구경을 하기에 좋아 보여.",
+      mall: "쇼핑몰 안이 북적여. 새 옷을 보거나 간식 코너를 들르기 좋은 분위기야.",
+    };
 
     function todayKey() {
       const now = new Date();
@@ -630,6 +732,45 @@
 
     function refreshCoinUI() {
       coinValueEl.textContent = formatCoin(coinState.balance);
+    }
+
+    function loadAffectionState() {
+      try {
+        const raw = localStorage.getItem(AFFECTION_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        const value = Number(parsed?.value);
+        return { value: Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0 };
+      } catch {
+        return { value: 0 };
+      }
+    }
+
+    function saveAffectionState() {
+      localStorage.setItem(AFFECTION_STORAGE_KEY, JSON.stringify(affectionState));
+    }
+
+    function refreshAffectionUI() {
+      affectionValueEl.textContent = String(affectionState.value).padStart(3, "0");
+    }
+
+    function addAffection(amount) {
+      affectionState.value = Math.max(0, affectionState.value + Math.floor(amount));
+      saveAffectionState();
+      refreshAffectionUI();
+    }
+
+    function loadEventState() {
+      try {
+        const raw = localStorage.getItem(EVENT_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        return { claimedDate: String(parsed?.claimedDate || "") };
+      } catch {
+        return { claimedDate: "" };
+      }
+    }
+
+    function saveEventState() {
+      localStorage.setItem(EVENT_STORAGE_KEY, JSON.stringify(eventState));
     }
 
     function loadBackgroundIndex() {
@@ -748,6 +889,17 @@
       return `${path}?${q.toString()}`;
     }
 
+    function syncBgmPlayback() {
+      if (!bgmPlayer) return;
+      bgmPlayer.volume = 0.45;
+      if (localStorage.getItem(BGM_ENABLED_KEY) === "1") {
+        bgmPlayer.play().catch(() => {});
+        return;
+      }
+      bgmPlayer.pause();
+      bgmPlayer.currentTime = 0;
+    }
+
     function embedUrlFromVideoId(videoId) {
       const params = new URLSearchParams({
         autoplay: "1",
@@ -797,6 +949,121 @@
     function closeRabbitTvModal() {
       rabbitTvFrame.src = "about:blank";
       rabbitTvModal.style.display = "none";
+    }
+
+    function closeInfoModal() {
+      infoModal.style.display = "none";
+      infoActions.innerHTML = "";
+    }
+
+    function openInfoModal(title, body, actions = []) {
+      infoTitle.textContent = title;
+      infoBody.textContent = body;
+      infoActions.innerHTML = "";
+      for (const action of actions) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `info-action ${action.kind || "secondary"}`;
+        btn.textContent = action.label;
+        btn.onclick = () => {
+          if (action.closeFirst !== false) closeInfoModal();
+          action.onClick?.();
+        };
+        infoActions.appendChild(btn);
+      }
+      if (actions.length === 0) {
+        const okBtn = document.createElement("button");
+        okBtn.type = "button";
+        okBtn.className = "info-action primary";
+        okBtn.textContent = "확인";
+        okBtn.onclick = closeInfoModal;
+        infoActions.appendChild(okBtn);
+      }
+      infoModal.style.display = "flex";
+    }
+
+    function currentPartnerLabel() {
+      return COUPLE_ASSETS.find((x)=>x.id === selectedCoupleId)?.label || "";
+    }
+
+    function describeCurrentLocation() {
+      const bg = BG_ASSETS[currentBgIndex];
+      return LOCAL_SPOTS[bg.id] || `${bg.label} 배경이 선택되어 있어.`;
+    }
+
+    function showCoinStatus() {
+      const partner = currentPartnerLabel();
+      openInfoModal(
+        "아진코인 상태",
+        `보유 코인: ${formatCoin(coinState.balance)}\n오늘 출석 충전: +${DAILY_CHARGE}\n게임 입장 비용: -${GAME_COST}\n${partner ? `현재 함께 있는 친구: ${partner}` : "아직 함께 다니는 친구가 없어."}`,
+      );
+    }
+
+    function showAffectionStatus() {
+      const partner = currentPartnerLabel();
+      openInfoModal(
+        "친밀도",
+        partner
+          ? `${partner}와의 친밀도는 ${affectionState.value} 이야.\n선물 주기나 같이 놀기로 더 올릴 수 있어.`
+          : `아직 함께 다니는 친구가 없어.\n커플 메뉴에서 친구를 고른 뒤 친밀도를 쌓아봐.`,
+      );
+    }
+
+    function claimDailyEventReward() {
+      const today = todayKey();
+      if (eventState.claimedDate === today) {
+        openInfoModal("오늘 이벤트", `오늘 보상은 이미 받았어.\n내일 다시 오면 아진코인 ${EVENT_REWARD}개를 줄게!`);
+        return;
+      }
+      coinState.balance += EVENT_REWARD;
+      eventState.claimedDate = today;
+      saveCoinState();
+      saveEventState();
+      refreshCoinUI();
+      openInfoModal("이벤트 보상", `반짝 출석 이벤트 성공!\n아진코인 ${EVENT_REWARD}개를 받았어.`);
+    }
+
+    function showMapGuide() {
+      const bg = BG_ASSETS[currentBgIndex];
+      openInfoModal("지도", `지금 위치는 ${bg.label} 이야.\n${describeCurrentLocation()}`);
+    }
+
+    function giveGiftToPartner() {
+      if (!selectedCoupleId) {
+        openInfoModal(
+          "선물 주기",
+          "먼저 친구를 선택해야 선물을 줄 수 있어.",
+          [
+            { label: "친구 고르기", kind: "primary", onClick: openCoupleModal },
+            { label: "닫기", kind: "secondary" },
+          ],
+        );
+        return;
+      }
+      const partner = currentPartnerLabel();
+      openInfoModal(
+        "선물 주기",
+        `${partner}에게 선물을 줄까?\n코인 ${GIFT_COST}개가 필요하고 친밀도는 +${GIFT_AFFECTION_GAIN} 올라가.`,
+        [
+          {
+            label: "선물 주기",
+            kind: "primary",
+            onClick: () => {
+              if (!trySpendCoin(GIFT_COST)) {
+                openInfoModal("코인 부족", "선물을 주기엔 코인이 부족해.\n게임이나 출석 이벤트로 코인을 모아봐.");
+                return;
+              }
+              addAffection(GIFT_AFFECTION_GAIN);
+              openInfoModal("선물 완료", `${partner}가 정말 좋아했어!\n친밀도 +${GIFT_AFFECTION_GAIN}`);
+            },
+          },
+          { label: "취소", kind: "secondary" },
+        ],
+      );
+    }
+
+    function showSimpleAction(title, body) {
+      openInfoModal(title, body);
     }
 
     function needsAnimation() {
@@ -1097,6 +1364,9 @@
         exitBackgroundSelector(false);
         return;
       }
+      localStorage.removeItem(BGM_ENABLED_KEY);
+      bgmPlayer.pause();
+      bgmPlayer.currentTime = 0;
       location.href = withCommonParams("index.html");
     };
 
@@ -1104,7 +1374,11 @@
       const el = e.target.closest("[data-act]");
       if(!el) return;
       if (el.dataset.act === "코인") {
-        alert(`보유 코인: ${formatCoin(coinState.balance)}`);
+        showCoinStatus();
+        return;
+      }
+      if (el.dataset.act === "호감도") {
+        showAffectionStatus();
         return;
       }
       if (el.dataset.act === "이곳") {
@@ -1129,13 +1403,47 @@
       }
       if (el.dataset.act === "게임") {
         if (!trySpendCoin(GAME_COST)) {
-          alert("코인이 부족해! (게임 1회: 1코인)");
+          openInfoModal("코인 부족", "코인이 부족해!\n게임 1회 입장에는 1코인이 필요해.");
           return;
         }
         location.href = withCommonParams("chess.html");
         return;
       }
-      alert("클릭: " + el.dataset.act);
+      if (el.dataset.act === "이벤트") {
+        claimDailyEventReward();
+        return;
+      }
+      if (el.dataset.act === "지도") {
+        showMapGuide();
+        return;
+      }
+      if (el.dataset.act === "주기") {
+        giveGiftToPartner();
+        return;
+      }
+      if (el.dataset.act === "친구") {
+        openCoupleModal();
+        return;
+      }
+      if (el.dataset.act === "전국") {
+        showSimpleAction("전국", "전국 친구들이 접속 중이야.\n다음 업데이트에서는 지역별 친구 탐험이 열릴 예정이야.");
+        return;
+      }
+      if (el.dataset.act === "홈") {
+        showSimpleAction("홈", `오늘의 홈 상태는 포근함 최고!\n${userName || "플레이어"}의 방은 아주 아늑해 보여.`);
+        return;
+      }
+      if (el.dataset.act === "톡") {
+        showSimpleAction("톡", "방송 버튼을 누르면 토끼봇과 바로 채팅할 수 있어.");
+        return;
+      }
+      if (el.dataset.act === "초록") {
+        showSimpleAction("초록", "초록 메뉴는 휴식 공간이야.\n숲 배경으로 바꾸고 잠깐 쉬어가도 좋아.");
+        return;
+      }
+      if (el.dataset.act === "탄검") {
+        showSimpleAction("탄검", "탄검 메뉴는 다음 탐험 업데이트용 슬롯이야.\n지금은 준비 중이야.");
+      }
     });
 
     bgPrevBtn.onclick = ()=> {
@@ -1168,7 +1476,7 @@
     };
     coupleConfirmBtn.onclick = ()=> {
       if (!draftCoupleId) {
-        alert("친구 캐릭터를 선택해줘!");
+        openInfoModal("친구 선택", "친구 캐릭터를 선택해줘!");
         return;
       }
       applyCoupleSelection();
@@ -1189,10 +1497,16 @@
       ensureAnimationLoop();
       draw();
     };
+    infoCloseBtn.onclick = closeInfoModal;
+    infoModal.addEventListener("click", (e)=>{
+      if (e.target === infoModal) closeInfoModal();
+    });
 
     (async function init(){
+      syncBgmPlayback();
       applyDailyCharge();
       saveCoinState();
+      refreshAffectionUI();
       images.girl = await loadImage(ASSETS.girl);
       images.boy  = await loadImage(ASSETS.boy);
       const loadedBackgrounds = await Promise.all(

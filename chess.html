@@ -210,6 +210,7 @@
 </head>
 <body>
   <div id="gameWrap">
+    <audio id="bgmPlayer" src="꼬리가_살랑살랑.mp3" loop preload="auto"></audio>
     <div id="topBar">
       <button id="backBtn" class="btn">← 메인</button>
       <h1 id="title">체스 게임</h1>
@@ -244,6 +245,7 @@
     import { Chess } from "https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm";
 
     const USER_NAME_KEY = "AHJIN_USER_NAME";
+    const BGM_ENABLED_KEY = "AHJIN_BGM_ENABLED_V1";
     const params = new URLSearchParams(location.search);
     const gender = params.get("gender") === "boy" ? "boy" : "girl";
     const userName = (params.get("name") || localStorage.getItem(USER_NAME_KEY) || "").trim();
@@ -256,6 +258,7 @@
     const movesEl = document.getElementById("moves");
     const backBtn = document.getElementById("backBtn");
     const resetBtn = document.getElementById("resetBtn");
+    const bgmPlayer = document.getElementById("bgmPlayer");
 
     const game = new Chess();
     let selectedSquare = null;
@@ -454,6 +457,17 @@
       return `${path}?${q.toString()}`;
     }
 
+    function syncBgmPlayback() {
+      if (!bgmPlayer) return;
+      bgmPlayer.volume = 0.45;
+      if (localStorage.getItem(BGM_ENABLED_KEY) === "1") {
+        bgmPlayer.play().catch(() => {});
+        return;
+      }
+      bgmPlayer.pause();
+      bgmPlayer.currentTime = 0;
+    }
+
     backBtn.onclick = ()=>{
       location.href = withCommonParams("main.html");
     };
@@ -465,6 +479,7 @@
       drawBoard();
     };
 
+    syncBgmPlayback();
     drawBoard();
   </script>
 </body>

@@ -201,6 +201,7 @@
 
 <body>
   <div id="gameWrap">
+    <audio id="bgmPlayer" src="꼬리가_살랑살랑.mp3" loop preload="auto"></audio>
     <button id="backBtn">←</button>
     <div id="broadcastTitle">📡 방송</div>
 
@@ -249,7 +250,12 @@
   <script>
     // ── 캐릭터 ──
     const ASSETS = { girl: "girl_broadcast.png", boy: "boy_broadcast.png" };
+    const MUKBANG_ASSETS = {
+      girl: { idle: "challenge/chicken-girl.png", eat: "challenge/chicken-girl-eat.png" },
+      boy: { idle: "challenge/chicken-boy.png", eat: "challenge/chicken-boy-eat.png" },
+    };
     const USER_NAME_KEY = "AHJIN_USER_NAME";
+    const BGM_ENABLED_KEY = "AHJIN_BGM_ENABLED_V1";
     const params = new URLSearchParams(location.search);
     const gender = (params.get("gender") === "boy") ? "boy" : "girl";
     const userName = (params.get("name") || localStorage.getItem(USER_NAME_KEY) || "").trim();
@@ -257,7 +263,10 @@
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
+    const bgmPlayer = document.getElementById("bgmPlayer");
     let images = {};
+    let mukbangImages = {};
+    let mukbangState = { isEating: false, chickenHitbox: null };
 
     function resize(){
       const rect = canvas.getBoundingClientRect();
@@ -282,7 +291,10 @@
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
       ctx.clearRect(0,0,w,h);
-      const img = images[gender];
+      const isMukbangRoom = currentRoom === "먹방";
+      const img = isMukbangRoom
+        ? (mukbangState.isEating ? mukbangImages[gender]?.eat : mukbangImages[gender]?.idle)
+        : images[gender];
       if(!img) return;
       const scaleW = w / img.width;
       const scaleH = h / img.height;
@@ -292,6 +304,33 @@
       const x = (w - dw) / 2;
       const y = h - dh;
       ctx.drawImage(img, x, y, dw, dh);
+
+      if (isMukbangRoom) {
+        const hitX = x + (dw * 0.56);
+        const hitY = y + (dh * 0.50);
+        const hitW = dw * 0.30;
+        const hitH = dh * 0.28;
+        mukbangState.chickenHitbox = { x: hitX, y: hitY, w: hitW, h: hitH };
+        if (!mukbangState.isEating) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(255,255,255,0.9)";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.strokeRect(hitX, hitY, hitW, hitH);
+          ctx.setLineDash([]);
+          ctx.fillStyle = "rgba(255,255,255,0.92)";
+          ctx.beginPath();
+          ctx.roundRect(hitX - 4, hitY - 34, 112, 26, 13);
+          ctx.fill();
+          ctx.fillStyle = "#d84315";
+          ctx.font = "700 12px 'Noto Sans KR', sans-serif";
+          ctx.fillText("치킨을 눌러 먹기", hitX + 10, hitY - 17);
+          ctx.restore();
+        }
+        return;
+      }
+
+      mukbangState.chickenHitbox = null;
     }
 
     function withCommonParams(path) {
@@ -301,20 +340,23 @@
       return `${path}?${q.toString()}`;
     }
 
-    // ── 네비게이션 ──
-    document.getElementById("backBtn").onclick = ()=> {
-      location.href = withCommonParams("main.html");
-    };
-    document.getElementById("menuGrid").addEventListener("click", (e)=>{
-      const el = e.target.closest("[data-act]");
-      if(!el) return;
-      alert("클릭: " + el.dataset.act);
-    });
+    function syncBgmPlayback() {
+      if (!bgmPlayer) return;
+      bgmPlayer.volume = 0.45;
+      if (localStorage.getItem(BGM_ENABLED_KEY) === "1") {
+        bgmPlayer.play().catch(() => {});
+        return;
+      }
+      bgmPlayer.pause();
+      bgmPlayer.currentTime = 0;
+    }
 
     // ── 귀여운 챗봇 (토끼봇 🐰) ──
     const chatMessages = document.getElementById("chatMessages");
     const msgInput = document.getElementById("msgInput");
     const sendBtn = document.getElementById("sendBtn");
+    const chatArea = document.getElementById("chatArea");
+    const hearts = document.getElementById("hearts");
 
     const BOT_NAME = "토끼봇";
     const BOT_ICON = "🐰";
@@ -323,7 +365,19 @@
     const chatEndpoint = apiBase ? `${apiBase}/api/chat` : `${location.origin}/api/chat`;
     const personasEndpoint = apiBase ? `${apiBase}/api/personas` : `${location.origin}/api/personas`;
     const personaSelect = document.getElementById("personaSelect");
+    const broadcastTitle = document.getElementById("broadcastTitle");
     const PERSONA_STORAGE_KEY = `AHJIN_PERSONA_V1:${userName || "guest"}`;
+    const ROOM_STORAGE_KEY = `AHJIN_BROADCAST_ROOM_V1:${userName || "guest"}`;
+    const ROOM_INTROS = {
+      "친구방": "친구들이 우르르 들어왔어. 오늘 있었던 일을 가볍게 수다 떠는 분위기야.",
+      "요리방": "부엌에서 맛있는 냄새가 나. 오늘의 메뉴를 같이 정해보자.",
+      "꾸미기방": "반짝반짝 꾸미기 시간이야. 옷이나 방 장식을 같이 골라볼까?",
+      "생활방": "일상 기록 모드야. 오늘 한 일이나 기분을 차분하게 얘기하기 좋아.",
+      "챌린지": "작은 도전 과제를 해보는 방이야. 한 가지 목표를 정하면 더 재밌어.",
+      "겜방": "게임 얘기와 플레이가 중심이야. 오늘 할 게임이나 전략을 말해봐.",
+      "먹방": "간식과 음식 얘기로 가득한 방이야. 지금 먹고 싶은 메뉴를 말해줘.",
+    };
+    let currentRoom = localStorage.getItem(ROOM_STORAGE_KEY) || "친구방";
 
     // 패턴 매칭 응답
     const PATTERNS = [
@@ -486,6 +540,61 @@
       return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
     }
 
+    function setActiveRoom(roomName) {
+      currentRoom = roomName;
+      mukbangState.isEating = false;
+      localStorage.setItem(ROOM_STORAGE_KEY, currentRoom);
+      broadcastTitle.textContent = `📡 방송 · ${currentRoom}`;
+      const isMukbangRoom = currentRoom === "먹방";
+      chatArea.style.display = isMukbangRoom ? "none" : "flex";
+      hearts.style.display = isMukbangRoom ? "none" : "flex";
+      document.querySelectorAll("#menuGrid .menu-btn[data-act]").forEach((btn) => {
+        btn.style.outline = btn.dataset.act === currentRoom ? "3px solid rgba(255,255,255,0.9)" : "";
+      });
+      if (!isMukbangRoom) {
+        addSystemMessage(`${currentRoom} 입장 완료`);
+        addBotMessage(ROOM_INTROS[currentRoom] || "새 방으로 이동했어. 같이 얘기해보자!");
+      }
+      draw();
+    }
+
+    function addReactionBurst() {
+      const reactions = ["💗", "✨", "🐰", "🎉", "👏"];
+      const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+      const botReplies = [
+        "우와 반응 올라간다! 더 신나는 얘기 해보자~",
+        "채팅창이 반짝반짝해졌어 ✨",
+        "토끼봇도 신났어! 다음 멘트 가보자 🐰",
+      ];
+      addSystemMessage(`시청자 반응 +1 ${reaction}`);
+      addBotMessage(botReplies[Math.floor(Math.random() * botReplies.length)]);
+    }
+
+    // ── 네비게이션 ──
+    document.getElementById("backBtn").onclick = ()=> {
+      location.href = withCommonParams("main.html");
+    };
+    document.getElementById("menuGrid").addEventListener("click", (e)=>{
+      const el = e.target.closest("[data-act]");
+      if(!el) return;
+      if (el.dataset.act === "추가") {
+        addReactionBurst();
+        return;
+      }
+      setActiveRoom(el.dataset.act);
+    });
+    canvas.addEventListener("click", (e) => {
+      if (currentRoom !== "먹방" || mukbangState.isEating || !mukbangState.chickenHitbox) return;
+      const rect = canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const box = mukbangState.chickenHitbox;
+      const inside = px >= box.x && px <= box.x + box.w && py >= box.y && py <= box.y + box.h;
+      if (!inside) return;
+      mukbangState.isEating = true;
+      draw();
+    });
+
     sendBtn.onclick = sendMessage;
     personaSelect.addEventListener("change", ()=> {
       localStorage.setItem(PERSONA_STORAGE_KEY, getSelectedPersona());
@@ -500,11 +609,21 @@
 
     // ── 시작 ──
     (async function init(){
+      syncBgmPlayback();
       images.girl = await loadImage(ASSETS.girl);
       images.boy  = await loadImage(ASSETS.boy);
+      mukbangImages.girl = {
+        idle: await loadImage(MUKBANG_ASSETS.girl.idle),
+        eat: await loadImage(MUKBANG_ASSETS.girl.eat),
+      };
+      mukbangImages.boy = {
+        idle: await loadImage(MUKBANG_ASSETS.boy.idle),
+        eat: await loadImage(MUKBANG_ASSETS.boy.eat),
+      };
       await loadPersonas();
       localStorage.setItem(PERSONA_STORAGE_KEY, getSelectedPersona());
       resize();
+      setActiveRoom(currentRoom);
       addSystemMessage(`채팅 준비 완료 · 페르소나: ${personaSelect.options[personaSelect.selectedIndex]?.textContent || getSelectedPersona()}`);
     })().catch(console.error);
   </script>
