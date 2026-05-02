@@ -31,11 +31,13 @@ jobs:
         run: |
           mkdir -p _site
           cp -R backgrounds _site/backgrounds
+          cp -R challenge _site/challenge
           cp -R friends _site/friends
           cp -R archive _site/archive
           cp index.html main.html broadcast.html chess.html _site/
           cp boy.png girl.png boy_broadcast.png girl_broadcast.png _site/
           cp boy_broadcast_orig.jpg girl_broadcast_orig.jpg _site/
+          cp 꼬리가_살랑살랑.mp3 _site/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
